@@ -1,0 +1,469 @@
+<!--
+╔════════════════════════════════════════════════════════════════╗
+║  İBB HALK SÜT - FİLO YÖNETİM SİSTEMİ                            ║
+║  Dosya: vitrin-yonetici.html                                     ║
+║                                                                   ║
+║  İÇERİK:                                                         ║
+║    1) MODAL (genel uyarı kutusu)                                 ║
+║    2) EKRAN: ANA VİTRİN                                          ║
+║    3) EKRAN: SAHA İŞLEMLERİ (8 buton girişi)                     ║
+║    4) EKRAN: YÖNETİCİ GİRİŞ                                      ║
+║    5) EKRAN: YÖNETİCİ PANEL                                      ║
+║    6) EKRAN: RAPORLAMA (iskelet)                                 ║
+║                                                                   ║
+║  NOT: 8 saha modülü formu "saha-modulleri.html" içinde           ║
+║                                                                   ║
+║  Birleştirme: index.html → <?!= include('vitrin-yonetici') ?>    ║
+║  Kuruluş: Yakup + Claude                                         ║
+╚════════════════════════════════════════════════════════════════╝
+-->
+  <!-- =============== MODAL =============== -->
+  <div id="customAlert" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header" id="modalB">SİSTEM MESAJI</div>
+      <div class="modal-body" id="modalM">...</div>
+      <div class="modal-footer">
+        <button class="modal-btn" onclick="kapatUyari()">Tamam</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== RED MODAL (Aşama 1.5) =============== -->
+  <div id="redModal" class="red-modal-overlay">
+    <div class="red-modal-box">
+      <div class="red-modal-header">
+        <span>❌</span>
+        <span>KAYDI REDDET</span>
+      </div>
+      <div class="red-modal-body">
+        <div class="red-modal-bilgi" id="redModalBilgi">—</div>
+        <label class="red-modal-label">Red Gerekçesi <span style="color:#fca5a5;">*</span></label>
+        <textarea id="redModalGerekce" class="red-modal-textarea" 
+                  placeholder="Bu kaydı neden reddediyorsunuz? (En az 5 karakter)"
+                  oninput="redModalSayacGuncelle()"
+                  maxlength="500"></textarea>
+        <div class="red-modal-sayac" id="redModalSayac">0 / 5 karakter (minimum)</div>
+      </div>
+      <div class="red-modal-footer">
+        <button class="red-modal-iptal" onclick="redModalKapat()">İPTAL</button>
+        <button class="red-modal-onayla" id="redModalOnaylaBtn" onclick="redModalGonder()" disabled>REDDET</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== EKRAN: ANA VİTRİN =============== -->
+  <div id="ekran-vitrin" class="screen active">
+    <div class="vitrin-yeni">
+
+      <!-- Logo + Kalp Paneli (Mobilde Üst, Masaüstünde Sol) -->
+      <div class="vitrin-logo-panel">
+        <img src="https://lh3.googleusercontent.com/d/1w_3PFXktapY0z6TgLSwHGe7r1mq97q6d=w800"
+             alt="İBB - 16 Milyon İçin Çalışıyoruz"
+             class="vitrin-ibb-gorsel">
+      </div>
+
+      <!-- İçerik Paneli (Mobilde Alt, Masaüstünde Sağ) -->
+      <div class="vitrin-icerik-panel">
+
+        <div class="vitrin-baslik">
+          <div class="ust">HALK SÜT</div>
+          <div class="alt">ARAÇ YÖNETİM</div>
+        </div>
+
+        <div class="vitrin-modul-alani">
+
+          <button class="vitrin-saha-btn" onclick="ekranDegistir('ekran-saha')">
+            <div class="saha-ikon">
+              <img src="https://lh3.googleusercontent.com/d/1WyMcmnraXc-j9J5jsWZTPR3rBN120YRS=w200" alt="Halk Süt" class="halksut-ikon">
+            </div>
+            <div class="saha-yazi">SAHA İŞLEMLERİ</div>
+            <div class="saha-ok">›</div>
+          </button>
+
+          <div class="vitrin-alt-btnlar">
+            <button class="vitrin-mini-btn" onclick="raporlamaGirisKontrol()">
+              <div class="mini-ikon">🔒</div>
+              <div class="mini-yazi">RAPORLAMA</div>
+            </button>
+            <button class="vitrin-mini-btn" onclick="ekranDegistir('ekran-yonetici-giris')">
+              <div class="mini-ikon">🔒</div>
+              <div class="mini-yazi">YÖNETİCİ GİRİŞİ</div>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =============== EKRAN: SAHA İŞLEMLERİ =============== -->
+  <div id="ekran-saha" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-vitrin')">⬅ GERİ DÖN</button>
+    </div>
+
+    <!-- Plaka + Ad Soyad Giriş Alanı (Saha modülünün üstünde) -->
+    <div class="saha-giris-ust">
+      <div class="vitrin-input-box">
+        <span class="ikon">
+          <img src="https://lh3.googleusercontent.com/d/1WyMcmnraXc-j9J5jsWZTPR3rBN120YRS=w100" alt="Plaka" class="halksut-mini-ikon">
+        </span>
+        <select id="pSelect" onchange="sahaGirisKontrol()">
+          <option value="">PLAKA SEÇİNİZ</option>
+        </select>
+        <span style="color: rgba(30, 41, 59, 0.5); font-size: 12px;">▼</span>
+      </div>
+      <div class="vitrin-input-box">
+        <span class="ikon">👤</span>
+        <input type="text" id="uName" placeholder="AD SOYAD GİRİNİZ"
+               oninput="this.value=this.value.toUpperCase(); sahaGirisKontrol();">
+      </div>
+      <div class="saha-uyari-band" id="sahaUyariBand">
+        <span>⚠ PLAKA VE İSİM GİRİLİNCE BUTONLAR AKTİFLEŞİR</span>
+      </div>
+    </div>
+
+    <div id="aracKunyeKonteyner"></div>
+
+    <div class="saha-container">
+      <div class="saha-modul-grid">
+
+        <button class="saha-modul-btn m-zimmet" onclick="sahaModulAc('ekran-zimmet')">
+          <div class="ikon">📋</div>
+          <div class="metin">ZİMMET İŞLEMLERİ</div>
+        </button>
+
+        <button class="saha-modul-btn m-gecici" onclick="sahaModulAc('ekran-gecici')">
+          <div class="ikon">🔄</div>
+          <div class="metin">GEÇİCİ KULLANIM</div>
+        </button>
+
+        <button class="saha-modul-btn m-kaza" onclick="sahaModulAc('ekran-kaza')">
+          <div class="ikon">🚨</div>
+          <div class="metin">KAZA / HASAR</div>
+        </button>
+
+        <button class="saha-modul-btn m-servis" onclick="sahaModulAc('ekran-servis')">
+          <div class="ikon">🔧</div>
+          <div class="metin">SERVİS İŞLEMLERİ</div>
+        </button>
+
+        <button class="saha-modul-btn m-envanter" onclick="sahaModulAc('ekran-envanter')">
+          <div class="ikon">📦</div>
+          <div class="metin">ENVANTER</div>
+        </button>
+
+        <button class="saha-modul-btn m-km" onclick="sahaModulAc('ekran-km')">
+          <div class="ikon">⏲️</div>
+          <div class="metin">GÜNCEL KM</div>
+        </button>
+
+        <button class="saha-modul-btn m-periyodik" onclick="sahaModulAc('ekran-periyodik')">
+          <div class="ikon">🔍</div>
+          <div class="metin">PERİYODİK KONTROL</div>
+        </button>
+
+        <button class="saha-modul-btn m-linkler" onclick="sahaModulAc('ekran-linkler')">
+          <div class="ikon">🔗</div>
+          <div class="metin">ONLİNE LİNKLER</div>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =============== YÖNETİCİ GİRİŞ =============== -->
+  <div id="ekran-yonetici-giris" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-vitrin')">⬅ GERİ DÖN</button>
+    </div>
+    <div class="y-login-wrapper">
+      <div class="y-login-box-v2">
+        <div class="y-login-ikon">
+          <span style="font-size:30px;">🔐</span>
+        </div>
+        <h2 class="y-login-baslik">YÖNETİCİ GİRİŞİ</h2>
+        <p class="y-login-altyazi">Halk Süt Araç Yönetim</p>
+        
+        <div class="y-login-alan">
+          <label class="y-login-label">KULLANICI ADI</label>
+          <input type="text" id="y-Kullanici" class="y-login-input" placeholder="ahmet" autocomplete="username" value="yakup"
+                 oninput="this.value=this.value.toLowerCase()">
+        </div>
+        
+        <div class="y-login-alan">
+          <label class="y-login-label">ŞİFRE</label>
+          <input type="password" id="y-Sifre" class="y-login-input" placeholder="••••••••" autocomplete="current-password" value="gizli123"
+                 onkeypress="if(event.key==='Enter') yoneticiKontrolEt()">
+        </div>
+        
+        <div id="y-login-hata" class="y-login-hata"></div>
+        
+        <button class="y-login-btn" onclick="yoneticiKontrolEt()">GİRİŞ YAP</button>
+        
+        <p class="y-login-not">Şifrenizi unuttuysanız sistem yöneticinize başvurun</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== YÖNETİCİ PANEL =============== -->
+  <!-- Operasyonel alan: Yardımcılar + Admin görür -->
+  <div id="ekran-yonetici-panel" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="cikisYap()">⬅ ÇIKIŞ</button>
+    </div>
+    <div class="y-panel">
+      <div class="y-baslik-kart">
+        <div class="y-baslik-sol">
+          <div class="y-baslik-ikon">🛡️</div>
+          <div>
+            <div class="y-baslik-ust">YÖNETİM MERKEZİ</div>
+            <div class="y-baslik-alt" id="aktifYonetici">—</div>
+          </div>
+        </div>
+        <div class="y-baslik-rozet" id="aktifYoneticiRol">—</div>
+      </div>
+
+      <!-- === AŞAMA B2: GÜNLÜK ARAÇ DURUMU === -->
+      <div class="gunluk-durum-kart" id="ym-gunlukDurum">
+        <div class="gunluk-durum-baslik">
+          <span class="gunluk-durum-ikon">📊</span>
+          <span class="gunluk-durum-yazi">BUGÜNKÜ ARAÇ DURUMU</span>
+          <span class="gunluk-durum-tarih" id="ym-gunlukTarih">—</span>
+        </div>
+        <div class="gunluk-durum-grid" id="ym-gunlukGrid">
+          <div class="gunluk-durum-yukleniyor">⏳ Yükleniyor...</div>
+        </div>
+      </div>
+
+      <!-- === ACİL DURUMLAR (kırmızı kutu - Açılır-Kapanır) === -->
+      <div class="acil-kutu" id="ym-acilKutu">
+        <div class="acil-baslik" onclick="acilAcKapat()">
+          <span class="acil-ikon">🚨</span>
+          <span class="acil-baslik-yazi">ACİL DİKKAT GEREKTİRENLER</span>
+          <span class="acil-rozet" id="ym-acilRozet">0</span>
+          <span class="acil-ok" id="ym-acilOk">▼</span>
+        </div>
+        <div class="acil-liste kapali" id="ym-acilListe"></div>
+      </div>
+
+      <!-- === BEKLEYEN ONAYLAR LİSTESİ (Açılır-Kapanır) === -->
+      <div class="onay-kutu">
+        <div class="onay-baslik" onclick="bekleyenOnaylarAcKapat()">
+          <span class="onay-ikon">⏳</span>
+          <span class="onay-baslik-yazi">BEKLEYEN ONAYLAR</span>
+          <span class="onay-rozet" id="ym-onayRozet">0</span>
+          <span class="onay-ok" id="ym-onayOk">▼</span>
+        </div>
+        <div class="onay-liste kapali" id="ym-onayListe">
+          <div class="onay-bos">⏳ Bekleyen onaylar yükleniyor...</div>
+        </div>
+      </div>
+
+      <!-- === ONAY GEÇMİŞİ (Aşama 1.6 — Açılır-Kapanır, Filtreli) === -->
+      <div class="gecmis-kutu">
+        <div class="gecmis-baslik" onclick="gecmisAcKapat()">
+          <span class="gecmis-ikon">📜</span>
+          <span class="gecmis-baslik-yazi">SON İŞLEMLER</span>
+          <span class="gecmis-rozet" id="ym-gecmisRozet">0</span>
+          <span class="gecmis-ok kapali" id="ym-gecmisOk">▼</span>
+        </div>
+        <div class="gecmis-liste kapali" id="ym-gecmisListe">
+          
+          <!-- Filtre + Arama Çubuğu -->
+          <div class="gecmis-filtre-bar">
+            <div class="gecmis-filtre-btnlar">
+              <button class="gecmis-filtre-btn aktif" data-filtre="tum" onclick="gecmisFiltreDegistir(this, 'tum')">📋 TÜMÜ</button>
+              <button class="gecmis-filtre-btn" data-filtre="onay" onclick="gecmisFiltreDegistir(this, 'onay')">✅ ONAY</button>
+              <button class="gecmis-filtre-btn" data-filtre="red" onclick="gecmisFiltreDegistir(this, 'red')">❌ RED</button>
+            </div>
+            <div class="gecmis-arama-kutu">
+              <span class="gecmis-arama-ikon">🔍</span>
+              <input type="text" class="gecmis-arama-input" id="ym-gecmisArama" 
+                     placeholder="Plaka, yönetici veya kullanıcı ara..."
+                     oninput="gecmisAramaYap()">
+            </div>
+          </div>
+          
+          <!-- Geçmiş Listesi -->
+          <div id="ym-gecmisIcerik">
+            <div class="gecmis-yukleniyor">⏳ Geçmiş yükleniyor...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === ALT BİLGİ === -->
+      <div class="y-alt-bilgi">
+        <span id="ym-sonGuncelleme">Veriler henüz yüklenmedi</span>
+        <button class="y-yenile-btn" onclick="yonetimYenile()">🔄 Yenile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== RAPORLAMA MERKEZİ =============== -->
+  <!-- Yönetim alanı: Sadece Admin görür -->
+  <div id="ekran-rapor" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-vitrin')">⬅ GERİ DÖN</button>
+    </div>
+    <div class="y-panel">
+      <div class="y-baslik-kart">
+        <div class="y-baslik-sol">
+          <div class="y-baslik-ikon" style="background:linear-gradient(135deg,#3b82f6,#1e3a8a);">📊</div>
+          <div>
+            <div class="y-baslik-ust">RAPORLAMA MERKEZİ</div>
+            <div class="y-baslik-alt" id="rapor-aktifKullanici">—</div>
+          </div>
+        </div>
+        <div class="y-baslik-rozet">ADMIN</div>
+      </div>
+
+      <!-- === 3 YER TUTUCU KART (Aşama 2'de doldurulacak) === -->
+      <div class="dash-grid-5">
+        <div class="dash-card-v2 dash-gray dash-placeholder">
+          <div class="dash-card-ikon">📊</div>
+          <div class="dash-card-bilgi">
+            <div class="dash-card-baslik">YAKINDA</div>
+            <div class="dash-card-deger">—</div>
+          </div>
+        </div>
+        <div class="dash-card-v2 dash-gray dash-placeholder">
+          <div class="dash-card-ikon">📈</div>
+          <div class="dash-card-bilgi">
+            <div class="dash-card-baslik">YAKINDA</div>
+            <div class="dash-card-deger">—</div>
+          </div>
+        </div>
+        <div class="dash-card-v2 dash-gray dash-placeholder">
+          <div class="dash-card-ikon">📉</div>
+          <div class="dash-card-bilgi">
+            <div class="dash-card-baslik">YAKINDA</div>
+            <div class="dash-card-deger">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === SİCİL KARTLARI (Plaka + Personel) === -->
+      <div class="sicil-kart-grid">
+        <div class="sicil-kart sicil-kart-arac" onclick="sicilKartiAc('arac')">
+          <div class="sicil-kart-ikon">🚐</div>
+          <div class="sicil-kart-icerik">
+            <div class="sicil-kart-baslik">ARAÇ SİCİL KARTI</div>
+            <div class="sicil-kart-altyazi">Plaka bazlı tüm geçmiş</div>
+          </div>
+          <div class="sicil-kart-ok">→</div>
+        </div>
+        <div class="sicil-kart sicil-kart-personel" onclick="sicilKartiAc('personel')">
+          <div class="sicil-kart-ikon">👤</div>
+          <div class="sicil-kart-icerik">
+            <div class="sicil-kart-baslik">PERSONEL SİCİL KARTI</div>
+            <div class="sicil-kart-altyazi">Personel bazlı tüm geçmiş</div>
+          </div>
+          <div class="sicil-kart-ok">→</div>
+        </div>
+      </div>
+
+      <!-- === ALT BİLGİ === -->
+      <div class="y-alt-bilgi">
+        <span id="y-sonGuncelleme">Veriler henüz yüklenmedi</span>
+        <button class="y-yenile-btn" onclick="dashboardYenile()">🔄 Verileri Yenile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== AŞAMA 1.7 — DETAY RAPOR EKRANI (Generic) =============== -->
+  <div id="ekran-rapor-detay" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-rapor')">⬅ GERİ DÖN</button>
+    </div>
+    <div class="y-panel">
+      
+      <!-- Başlık -->
+      <div class="detay-baslik-kart">
+        <div class="detay-baslik-ikon" id="detay-ikon">📋</div>
+        <div class="detay-baslik-yazi" id="detay-baslik">Modül Detayı</div>
+        <div class="detay-baslik-sayac" id="detay-sayac">0 kayıt</div>
+      </div>
+      
+      <!-- 5 İstatistik Kartı (Tıklanabilir = filtre) -->
+      <div class="detay-istat-grid">
+        <div class="detay-istat-kart aktif" data-filtre="tumu" onclick="detayKartTikla(this, 'tumu')">
+          <div class="detay-istat-deger" id="istat-toplam">0</div>
+          <div class="detay-istat-label">TOPLAM</div>
+        </div>
+        <div class="detay-istat-kart" data-filtre="buay" onclick="detayKartTikla(this, 'buay')">
+          <div class="detay-istat-deger" id="istat-buay">0</div>
+          <div class="detay-istat-label">BU AY</div>
+        </div>
+        <div class="detay-istat-kart bekleyen" data-filtre="bekleyen" onclick="detayKartTikla(this, 'bekleyen')">
+          <div class="detay-istat-deger" id="istat-bekleyen">0</div>
+          <div class="detay-istat-label">BEKLEYEN</div>
+        </div>
+        <div class="detay-istat-kart onayli" data-filtre="onayli" onclick="detayKartTikla(this, 'onayli')">
+          <div class="detay-istat-deger" id="istat-onayli">0</div>
+          <div class="detay-istat-label">ONAYLI</div>
+        </div>
+        <div class="detay-istat-kart reddedildi" data-filtre="reddedildi" onclick="detayKartTikla(this, 'reddedildi')">
+          <div class="detay-istat-deger" id="istat-reddedildi">0</div>
+          <div class="detay-istat-label">REDDEDİLDİ</div>
+        </div>
+      </div>
+      
+      <!-- Arama -->
+      <div class="detay-arama-kutu" style="margin-bottom:12px;">
+        <span class="detay-arama-ikon">🔍</span>
+        <input type="text" class="detay-arama-input" id="detay-arama" 
+               placeholder="Plaka veya kullanıcı ara..."
+               oninput="detayAramaYap()">
+      </div>
+      
+      <!-- Liste -->
+      <div class="detay-liste" id="detay-liste">
+        <div class="detay-yukleniyor">⏳ Yükleniyor...</div>
+      </div>
+      
+      <!-- Sayfalama -->
+      <div class="detay-sayfalama" id="detay-sayfalama" style="display:none;">
+        <button class="detay-sayfa-btn" id="detay-onceki" onclick="detaySayfaDegistir(-1)">◀ Önceki</button>
+        <span class="detay-sayfa-bilgi" id="detay-sayfa-bilgi">1 / 1</span>
+        <button class="detay-sayfa-btn" id="detay-sonraki" onclick="detaySayfaDegistir(1)">Sonraki ▶</button>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- =============== SİCİL KARTI (Generic: Araç + Personel) =============== -->
+  <div id="ekran-sicil-karti" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-rapor')">⬅ GERİ DÖN</button>
+    </div>
+    <div class="y-panel">
+      
+      <!-- Başlık (dinamik) -->
+      <div class="detay-baslik-kart" id="sicil-baslik-kart">
+        <div class="detay-baslik-ikon" id="sicil-baslik-ikon">🚐</div>
+        <div class="detay-baslik-yazi" id="sicil-baslik-yazi">ARAÇ SİCİL KARTI</div>
+      </div>
+      
+      <!-- Plaka/Personel Seçim -->
+      <div class="arac-secim-kutu">
+        <div class="detay-arama-kutu">
+          <span class="detay-arama-ikon">🔍</span>
+          <input type="text" class="detay-arama-input" id="sicil-arama" 
+                 placeholder="..."
+                 oninput="sicilAra()"
+                 onfocus="sicilListeAc()">
+        </div>
+        <div class="arac-plaka-liste" id="sicil-liste" style="display:none;"></div>
+      </div>
+      
+      <!-- Künye (sadece araç için) -->
+      <div id="sicil-kunye-alan"></div>
+      
+      <!-- Bölümler -->
+      <div id="sicil-bolumler"></div>
+      
+    </div>
+  </div>

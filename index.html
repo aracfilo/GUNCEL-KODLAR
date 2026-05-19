@@ -1,0 +1,45 @@
+<!--
+╔════════════════════════════════════════════════════════════════╗
+║  İBB HALK SÜT - FİLO YÖNETİM SİSTEMİ                            ║
+║  Dosya: index.html (Ana İskelet)                                 ║
+║  Görevi: HTML giriş noktası - diğer dosyaları include eder       ║
+║                                                                   ║
+║  YAPI:                                                            ║
+║    1) <head> içinde stil.html include edilir                     ║
+║    2) <body> içinde vitrin-yonetici.html include edilir          ║
+║    3) Devamında saha-modulleri.html include edilir               ║
+║    4) Son olarak javascript.html include edilir                  ║
+║                                                                   ║
+║  Birleştirme: Code.gs → doGet() → createTemplateFromFile         ║
+║                                                                   ║
+║  YENİ AI DEVRALIYORSA: "AI_DEVIR_TESLIM_BELGESI.md" oku!         ║
+║  Kuruluş: Yakup + Claude                                         ║
+╚════════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>İBB Halk Süt - Filo Yönetim Sistemi</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <?!= include('stil') ?>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <?!= include('vitrin-yonetici') ?>
+  <?!= include('saha-modulleri') ?>
+
+</div>
+
+<?!= include('javascript') ?>
+
+</body>
+</html>

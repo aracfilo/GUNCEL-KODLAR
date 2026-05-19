@@ -1,0 +1,645 @@
+<!--
+╔════════════════════════════════════════════════════════════════╗
+║  İBB HALK SÜT - FİLO YÖNETİM SİSTEMİ                            ║
+║  Dosya: saha-modulleri.html                                      ║
+║                                                                   ║
+║  İÇERİK: 8 Saha Modülü Formu                                     ║
+║    1) ZİMMET İŞLEMLERİ                                            ║
+║    2) GEÇİCİ KULLANIM                                             ║
+║    3) KAZA / HASAR                                                ║
+║    4) SERVİS KAYIT                                                ║
+║    5) ENVANTER                                                    ║
+║    6) PERİYODİK KONTROL (23 sütun)                                ║
+║    7) KM BİLGİSİ                                                  ║
+║    8) LİNKLER                                                     ║
+║                                                                   ║
+║  NOT: Modal + Ana Vitrin "vitrin-yonetici.html" içinde           ║
+║                                                                   ║
+║  Birleştirme: index.html → <?!= include('saha-modulleri') ?>     ║
+║  Kuruluş: Yakup + Claude                                         ║
+╚════════════════════════════════════════════════════════════════╝
+-->
+  <!-- =============== ZİMMET =============== -->
+  <div id="ekran-zimmet" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeZimmet"></div>
+    <div class="form-area">
+      <div class="sub-menu">
+        <button id="btn-zA" class="sub-btn active" onclick="sekmeZimmet('A')">Zimmet Alma</button>
+        <button id="btn-zB" class="sub-btn" onclick="sekmeZimmet('B')">Zimmet Devri</button>
+      </div>
+
+      <div id="frm-zA" class="form-group active">
+        <label class="f-label">Araç İmzaladığım Zimmet Belgesi İle Aynı Mıdır?</label>
+        <select id="z-Durum" class="f-select" onchange="zimmetKontrol()">
+          <option value="">Seçiniz...</option>
+          <option value="Tam">Evet, Tamdır</option>
+          <option value="Hasar">Hayır, Eksiklik/Hasar Vardır</option>
+        </select>
+        <button class="submit-btn" onclick="kaydetZimmetA()">Raporu Gönder</button>
+      </div>
+
+      <div id="frm-zB" class="form-group">
+        <div class="alert-box alert-green">👌 Zimmet Düşüm Belgesini İmzaladım. Herhangi Bir Eksiklik Olmadığını Beyan Ederim.</div>
+        <div class="alert-box alert-red" style="font-size: 13px;">YÖNETİCİ ONAYI İLE İŞLEM TAMAMLANIR</div>
+        <button class="submit-btn" onclick="kaydetZimmetB()">İşlemi Yöneticiye İlet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== GEÇİCİ =============== -->
+  <div id="ekran-gecici" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeGecici"></div>
+    <div class="form-area">
+      <div class="sub-menu">
+        <button id="btn-gA" class="sub-btn active" onclick="sekmeGecici('A')">📥 Geçici/Günübirlik Alıyorum</button>
+        <button id="btn-gB" class="sub-btn" onclick="sekmeGecici('B')">↩️ Zimmetli Aracımı Geri Alıyorum</button>
+      </div>
+
+      <div class="form-group active">
+        <div class="grid-2">
+          <div>
+            <label id="lbl-gKim" class="f-label">👤 Aracı Kimden Alıyorsunuz?</label>
+            <input type="text" id="g-Kim" class="f-input" placeholder="AD SOYAD"
+                   oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div>
+            <label class="f-label">🧹 Araç Temizliği (İç/Dış)</label>
+            <select id="g-Temiz" class="f-select">
+              <option value="Temiz">✨ Temiz</option>
+              <option value="Kirli">🧼 Kirli</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="alert-box alert-red">⚠️ ARACI ALDIĞINIZ/VERDİĞİNİZ KİŞİYİ YAZMAK ZORUNLUDUR!</div>
+
+        <label class="f-label">✅ Güncel Tutanak Dışında Yeni Hasar/Eksik Var Mı?</label>
+        <select id="g-Durum" class="f-select" onchange="geciciDurum()">
+          <option value="Tam">🆗 Hayır, Güncel Tutanağa Uygundur</option>
+          <option value="Hasar">⛔ Evet, Araçta Yeni Hasar Vardır</option>
+          <option value="Eksik">⛔ Evet, Envanterde Eksiklik Vardır</option>
+        </select>
+
+        <div id="g-Kutu-Hasar" style="display:none; background:#fef2f2; padding:10px; border-radius:8px; border:1px solid #fecaca; margin-bottom:10px;">
+          <div class="alert-box alert-red" style="margin-bottom:8px;">‼️ UYARI: Hasar Fotoğrafı Zorunludur. Plaka Görünmelidir.</div>
+          <div class="photo-grid">
+            <label class="photo-btn">🖼️ Seç <input type="file" id="gF1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'gi1')"></label>
+            <label class="photo-btn">📸 Çek <input type="file" id="gF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'gi1')"></label>
+          </div>
+          <div id="gi1" class="photo-status"></div>
+        </div>
+
+        <div id="g-Kutu-Eksik" style="display:none; background:#faf5ff; padding:10px; border-radius:8px; border:1px solid #e9d5ff; margin-bottom:10px;">
+          <div class="alert-box alert-purple" style="margin-bottom:8px;">📦 UYARI: Lütfen eksik olan envanteri/envanterleri seçiniz.</div>
+          <div class="check-grid">
+            <label><input type="checkbox" class="gC" value="Stepne"> Stepne</label>
+            <label><input type="checkbox" class="gC" value="Kriko"> Kriko</label>
+            <label><input type="checkbox" class="gC" value="Bijon"> Bijon A.</label>
+            <label><input type="checkbox" class="gC" value="Trafik"> Trafik S.</label>
+            <label><input type="checkbox" class="gC" value="Yangin"> Yangın T.</label>
+            <label><input type="checkbox" class="gC" value="Cihaz"> Kart Okuyucu</label>
+            <label><input type="checkbox" class="gC" value="Sensor"> Sensör</label>
+            <label><input type="checkbox" class="gC" value="Anten"> Anten</label>
+            <label><input type="checkbox" class="gC" value="Paspas"> Paspas</label>
+            <label><input type="checkbox" class="gC" value="Lastik"> Lastik</label>
+          </div>
+        </div>
+
+        <div id="g-Kutu-Taahhut" style="display:none;">
+          <div class="taahhut-box" style="border-color:#fca5a5; background:#fef2f2;">
+            <label style="color:#b91c1c; font-size:11px;">
+              <input type="checkbox" id="g-Taahhut-Onay">
+              TAAHHÜTNAME: Bu bildirim zimmet belgesi kontrol edilerek yapılmıştır. Taahhüt ederim.
+            </label>
+          </div>
+        </div>
+
+        <div id="g-progress" class="progress-container">
+          <div class="progress-text" id="g-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="g-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-gecici-gonder" onclick="kaydetGecici()">Raporu Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== KAZA =============== -->
+  <div id="ekran-kaza" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeKaza"></div>
+    <div class="form-area">
+      <div class="form-group active">
+
+        <div class="grid-2">
+          <div>
+            <label class="f-label">⏰ Kaza Tarih ve Saati</label>
+            <input type="datetime-local" id="k-Zaman" class="f-input">
+          </div>
+          <div>
+            <label class="f-label">Aracın Zimmet Durumu</label>
+            <select id="k-Zim" class="f-select">
+              <option value="Zimmetim">🔵 Kendi Zimmetim</option>
+              <option value="Emanet">🟡 Emanet/Geçici Kullanım</option>
+              <option value="Diger">⚪ Diğer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="f-label">Olay Türü <span style="color:#dc2626;">*</span></label>
+            <select id="k-Olay" class="f-select" onchange="kazaDurum()">
+              <option value="">Seçiniz...</option>
+              <option value="Ciddi">🚨 CİDDİ KAZA (Yaralanmalı/Maddi)</option>
+              <option value="Hafif">⚠️ HAFİF HASAR (Sürtme, Çizik)</option>
+            </select>
+          </div>
+          <div>
+            <label class="f-label">Tutanak Tutuldu Mu? <span style="color:#dc2626;">*</span></label>
+            <select id="k-Tutanak" class="f-select" onchange="kazaDurum()">
+              <option value="">Seçiniz...</option>
+              <option value="Evet">✅ Evet - Tutanak Tutuldu</option>
+              <option value="Hayir">❌ Hayır - Tutanak Tutulamadı</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div id="k-Kutu-Foto" style="display:none; background:#fef2f2; padding:10px; border-radius:8px; border:1px solid #fecaca;">
+            <div class="alert-box alert-red" style="margin-bottom:8px;">‼️ UYARI: Hasar Fotoğrafı Zorunludur.</div>
+            <div class="photo-grid">
+              <label class="photo-btn">🖼️ Seç <input type="file" id="kF1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'ki1')"></label>
+              <label class="photo-btn">📸 Çek <input type="file" id="kF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'ki1')"></label>
+            </div>
+            <div id="ki1" class="photo-status"></div>
+          </div>
+
+          <div id="k-Kutu-TutEvet" style="display:none; background:#fef3c7; padding:10px; border-radius:8px; border:1px solid #fde68a;">
+            <div class="alert-box" style="background:linear-gradient(135deg,#fde68a,#fcd34d); border:0; border-left:4px solid #d97706; color:#78350f; margin-bottom:8px;">📋 UYARI: Tutanak Fotoğrafı Zorunludur.</div>
+            <div class="photo-grid">
+              <label class="photo-btn video-btn">🖼️ Seç <input type="file" id="kTF1" accept="image/*" style="display:none;" onchange="fotoSec(this,'kti1')"></label>
+              <label class="photo-btn video-btn">📸 Çek <input type="file" id="kTF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'kti1')"></label>
+            </div>
+            <div id="kti1" class="photo-status"></div>
+          </div>
+        </div>
+
+        <div id="k-Kutu-Polis" style="display:none;" class="alert-box alert-red">⚠️ UYARI: Yaralanmalı kazalarda POLİS TUTANAĞI ZORUNLUDUR!</div>
+        <div id="k-Kutu-Hafif" style="display:none;" class="alert-box alert-red">⚠️ UYARI: Ciddi hasar varsa POLİS TUTANAĞI zorunludur!</div>
+
+        <div id="k-Kutu-TutHayir" style="display:none;">
+          <label class="f-label">Neden tutanamadınız?</label>
+          <textarea id="k-Neden" class="f-textarea"></textarea>
+          <div class="taahhut-box">
+            <label><input type="checkbox" id="k-Taahhut-Onay"> En kısa zamanda tutanak tutup sisteme yüklemeyi taahhüt ederim.</label>
+          </div>
+        </div>
+
+        <div id="k-progress" class="progress-container">
+          <div class="progress-text" id="k-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="k-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-kaza-gonder" onclick="kaydetKaza()">Raporu Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== SERVİS =============== -->
+  <div id="ekran-servis" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeServis"></div>
+    <div class="form-area">
+      <div style="text-align:center; margin-bottom:15px;">
+        <a href="#" style="color:var(--brand-blue); font-weight:700; font-size:12px; text-decoration:none;">📍 Anlaşmalı Servis Listesi Ve Konumlar İçin Tıklayınız</a>
+      </div>
+
+      <div class="sub-menu">
+        <button id="btn-sA" class="sub-btn active" onclick="sekmeServis('A')">1- Servise Bırakıyorum</button>
+        <button id="btn-sB" class="sub-btn" onclick="sekmeServis('B')">2- Servisten Alıyorum</button>
+      </div>
+
+      <div id="frm-sA" class="form-group active">
+        <div class="grid-2">
+          <div>
+            <label class="f-label">Aracı Servise Kim Götürüyor?</label>
+            <select id="s-Kim" class="f-select"><option value="">Seçiniz...</option></select>
+          </div>
+          <div>
+            <label class="f-label">Servise Gidiş Nedeni?</label>
+            <select id="s-Neden" class="f-select"><option value="">Seçiniz...</option></select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="f-label">Gidiş Şekli / Aciliyet?</label>
+            <select id="s-Acil" class="f-select"><option value="">Seçiniz...</option></select>
+          </div>
+          <div>
+            <label class="f-label">Servis İsmi</label>
+            <input type="text" id="s-Yer" class="f-input" placeholder="Servis İsmi">
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; margin-bottom:10px; border:1px solid #e2e8f0;">
+          <label class="f-label" style="text-align:center; color:var(--brand-blue); font-size:14px; margin-bottom:8px;">📋 ARAÇ İÇİ EVRAK DURUMU</label>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Arıza ve Bakım Formu</label>
+              <select id="s-Evr1" class="f-select" onchange="document.getElementById('s-FormFoto').style.display=(this.value=='Tam'?'block':'none')">
+                <option value="">Seçiniz...</option>
+                <option value="Tam">✅ Araçta Hazır ve Tam</option>
+                <option value="Eksik">⚠️ Araçta Yok / Eksik</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Ruhsat ve Sigorta Poliçesi</label>
+              <select id="s-Evr2" class="f-select">
+                <option value="Tam">✅ Araçta Hazır ve Tam</option>
+                <option value="Eksik">⚠️ Araçta Yok / Eksik</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="s-FormFoto" style="display:none; margin-top:8px;">
+            <div class="alert-box alert-red">UYARI: Araç Arıza ve Bakım Formu Fotoğrafı Zorunludur.</div>
+            <div class="photo-grid">
+              <label class="photo-btn">🖼️ Seç <input type="file" id="sF1" accept="image/*" style="display:none;" onchange="fotoSec(this,'si1')"></label>
+              <label class="photo-btn">📸 Çek <input type="file" id="sF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'si1')"></label>
+            </div>
+            <div id="si1" class="photo-status"></div>
+          </div>
+        </div>
+
+        <div id="s-progress" class="progress-container">
+          <div class="progress-text" id="s-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="s-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-servisA-gonder" onclick="kaydetServisA()">Raporu Gönder</button>
+      </div>
+
+      <div id="frm-sB" class="form-group">
+        <div class="grid-2">
+          <div>
+            <label class="f-label">📊 Güncel KM Bilgisi <span style="color:#dc2626;">*</span></label>
+            <input type="number" id="s-Km" class="f-input" placeholder="000000">
+          </div>
+          <div style="background:#f8fafc; padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0;">
+            <label class="f-label" style="font-size:12px; text-align:center; color:var(--brand-blue); margin-bottom:4px;">🔧 ARAÇ DIŞI ONARIMLAR</label>
+            <div class="check-grid" style="font-size:11px;">
+              <label><input type="checkbox" class="sC" value="Kaporta" onchange="servisOnaDur()"> Kaporta Tamiri</label>
+              <label><input type="checkbox" class="sC" value="Boya" onchange="servisOnaDur()"> Boya</label>
+              <label><input type="checkbox" class="sC" value="Cam" onchange="servisOnaDur()"> Cam Değişikliği</label>
+              <label><input type="checkbox" class="sC" value="Yag"> Yağ Değişimi</label>
+              <label><input type="checkbox" class="sC" value="Stepne"> Stepne Değişimi</label>
+              <label><input type="checkbox" class="sC" value="Baski"> Baskı-Balata</label>
+              <label><input type="checkbox" class="sC" value="Motor"> Motor Değişimi</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="s-Kutu-OnaFoto" style="display:none;">
+          <div class="alert-box alert-red">UYARI: Cam, Kaporta/Boya değişimlerinde fotoğraf zorunludur.</div>
+          <div class="photo-grid">
+            <label class="photo-btn">🖼️ Seç <input type="file" id="sOF1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'soi1')"></label>
+            <label class="photo-btn">📸 Çek <input type="file" id="sOF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'soi1')"></label>
+          </div>
+          <div id="soi1" class="photo-status"></div>
+        </div>
+
+        <div id="sb-progress" class="progress-container">
+          <div class="progress-text" id="sb-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="sb-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-servisB-gonder" onclick="kaydetServisB()">İşlemi Tamamla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== ENVANTER =============== -->
+  <div id="ekran-envanter" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeEnvanter"></div>
+    <div class="form-area">
+      <div class="sub-menu">
+        <button id="btn-eA" class="sub-btn active" onclick="sekmeEnvanter('A')">1- Eksik Bildirimi</button>
+        <button id="btn-eB" class="sub-btn" onclick="sekmeEnvanter('B')">2- Temin Bildirimi</button>
+      </div>
+
+      <div id="frm-eA" class="form-group active">
+        <div class="alert-box alert-red">⚠️ UYARI: Herhangi bir envanter eksikliği durumunda bildirim ZORUNLUDUR.</div>
+        <div class="alert-box alert-purple">📋 UYARI: Stepne / Anten / Kart Okuyucu çalınması durumunda POLİS TUTANAĞI zorunludur.</div>
+
+        <div class="grid-2">
+          <div style="background:#faf5ff; padding:10px; border-radius:8px; border:1px solid #e9d5ff;">
+            <label class="f-label" style="text-align:center; color:#7e22ce; font-size:13px; margin-bottom:6px;">📦 EKSİK ENVANTERLERİ SEÇİN</label>
+            <div class="check-grid">
+              <label><input type="checkbox" class="eC" value="Stepne"> Stepne</label>
+              <label><input type="checkbox" class="eC" value="Kart"> Kart Okutma</label>
+              <label><input type="checkbox" class="eC" value="Anten"> Anten Çalınması</label>
+              <label><input type="checkbox" class="eC" value="Kriko"> Kriko</label>
+              <label><input type="checkbox" class="eC" value="Bijon"> Bijon Anahtarı</label>
+              <label><input type="checkbox" class="eC" value="Trafik"> Trafik Seti</label>
+              <label><input type="checkbox" class="eC" value="Yangin"> Yangın Tüpü</label>
+              <label><input type="checkbox" class="eC" value="Sensor"> Arka Sensör</label>
+              <label><input type="checkbox" class="eC" value="Paspas"> Paspas</label>
+              <label><input type="checkbox" class="eC" value="Lastik"> Lastik İşlemleri</label>
+            </div>
+          </div>
+
+          <div>
+            <label class="f-label">Sisteme Yüklenecek Tutanak Hazır Mı?</label>
+            <select id="e-Tutanak" class="f-select" onchange="envanterTutanak()">
+              <option value="">Seçiniz...</option>
+              <option value="Evet">✅ Evet (Yükle)</option>
+              <option value="Hayir">❌ Hayır</option>
+            </select>
+
+            <div id="e-Kutu-TutFoto" style="display:none;">
+              <div class="alert-box alert-green">📋 Lütfen Tutanak Fotoğrafını Yükleyiniz.</div>
+              <div class="photo-grid">
+                <label class="photo-btn">🖼️ Seç <input type="file" id="eF1" accept="image/*" style="display:none;" onchange="fotoSec(this,'ei1')"></label>
+                <label class="photo-btn">📸 Çek <input type="file" id="eF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'ei1')"></label>
+              </div>
+              <div id="ei1" class="photo-status"></div>
+            </div>
+
+            <div id="e-Kutu-Taahhut" style="display:none;">
+              <div class="taahhut-box">
+                <label><input type="checkbox" id="e-Taahhut-Onay"> En kısa zamanda Tutanak Yüklemeyi Taahhüt Ediyorum.</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="e-progress" class="progress-container">
+          <div class="progress-text" id="e-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="e-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-envA-gonder" onclick="kaydetEnvanterA()">Eksik Bildirimi Gönder</button>
+      </div>
+
+      <div id="frm-eB" class="form-group">
+        <div class="alert-box alert-green">✅ Temin edilen envanteri seçiniz.</div>
+
+        <div style="background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0; margin-bottom:10px;">
+          <label class="f-label" style="text-align:center; color:#166534; font-size:13px; margin-bottom:6px;">📦 TEMİN EDİLENLERİ SEÇİN</label>
+          <div class="check-grid">
+            <label><input type="checkbox" class="eTemin" value="Stepne"> Stepne</label>
+            <label><input type="checkbox" class="eTemin" value="Kart"> Kart Okutma</label>
+            <label><input type="checkbox" class="eTemin" value="Anten"> Anten</label>
+            <label><input type="checkbox" class="eTemin" value="Kriko"> Kriko</label>
+            <label><input type="checkbox" class="eTemin" value="Bijon"> Bijon Anahtarı</label>
+            <label><input type="checkbox" class="eTemin" value="Trafik"> Trafik Seti</label>
+            <label><input type="checkbox" class="eTemin" value="Yangin"> Yangın Tüpü</label>
+            <label><input type="checkbox" class="eTemin" value="Sensor"> Arka Sensör</label>
+            <label><input type="checkbox" class="eTemin" value="Paspas"> Paspas</label>
+            <label><input type="checkbox" class="eTemin" value="Lastik"> Lastik</label>
+          </div>
+        </div>
+
+        <button class="submit-btn" onclick="kaydetEnvanterB()">Temin Bildirimi Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== PERİYODİK =============== -->
+  <div id="ekran-periyodik" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyePeriyodik"></div>
+    <div class="form-area periyodik-siki">
+      <div class="form-group active">
+
+        <!-- ============ BÖLÜM 1: GİYDİRME ============ -->
+        <div style="background:#eff6ff; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #bfdbfe;">
+          <label class="f-label" style="text-align:center; color:var(--brand-blue); font-size:14px; margin-bottom:8px;">📍 1. ARAÇ GİYDİRME DURUMU</label>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Giydirme Genel Durumu</label>
+              <select id="p-Giydirme" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Kusursuz">Kusursuz</option>
+                <option value="İyi">İyi</option>
+                <option value="Yıpranmış">Yıpranmış</option>
+                <option value="Hasarlı">Hasarlı</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Son 1 ay yıpranma var mı?</label>
+              <select id="p-GiydirmeYipranma" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Evet">Evet, var</option>
+                <option value="Hayır">Hayır, yok</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="alert-box alert-red">UYARI: Sağ ve Sol Giydirme Foto + Video ZORUNLU!</div>
+
+          <label class="f-label">Giydirme Fotoğrafları (Sağ + Sol)</label>
+          <div class="photo-grid">
+            <label class="photo-btn">🖼️ Seç <input type="file" id="pF1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'pi1')"></label>
+            <label class="photo-btn">📸 Çek <input type="file" id="pF2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'pi1')"></label>
+          </div>
+          <div id="pi1" class="photo-status"></div>
+
+          <label class="f-label" style="margin-top:6px;">Giydirme Notu (opsiyonel)</label>
+          <textarea id="p-GiydirmeNotu" class="f-input" rows="1" placeholder="Özel bir durum var mı?"></textarea>
+        </div>
+
+        <!-- ============ BÖLÜM 2: KAPORTA ============ -->
+        <div style="background:#fef2f2; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #fecaca;">
+          <label class="f-label" style="text-align:center; color:#991b1b; font-size:14px; margin-bottom:8px;">📍 2. ARAÇ KAPORTA DURUMU</label>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Kaporta Genel Durumu</label>
+              <select id="p-Kaporta" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Kusursuz">Kusursuz</option>
+                <option value="İyi">İyi</option>
+                <option value="Hafif Hasarlı">Hafif Hasarlı</option>
+                <option value="Ciddi Hasarlı">Ciddi Hasarlı</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Son 1 ay yeni hasar var mı?</label>
+              <select id="p-KaportaYipranma" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Evet">Evet, var</option>
+                <option value="Hayır">Hayır, yok</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="alert-box alert-red">(TÜM CEPHELERDE KAPORTA NET GÖRÜNMELİDİR.)</div>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Ön Cephe ve Arka Cephe</label>
+              <div class="photo-grid">
+                <label class="photo-btn">🖼️ Seç <input type="file" id="pC1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'piC')"></label>
+                <label class="photo-btn">📸 Çek <input type="file" id="pC2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'piC')"></label>
+              </div>
+              <div id="piC" class="photo-status"></div>
+            </div>
+            <div>
+              <label class="f-label">Sağ ve Sol Yanlar</label>
+              <div class="photo-grid">
+                <label class="photo-btn">🖼️ Seç <input type="file" id="pY1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'piY')"></label>
+                <label class="photo-btn">📸 Çek <input type="file" id="pY2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'piY')"></label>
+              </div>
+              <div id="piY" class="photo-status"></div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Aynalar (Sağ + Sol)</label>
+              <div class="photo-grid">
+                <label class="photo-btn">🖼️ Seç <input type="file" id="pA1" multiple accept="image/*" style="display:none;" onchange="fotoSec(this,'piA')"></label>
+                <label class="photo-btn">📸 Çek <input type="file" id="pA2" accept="image/*" capture="environment" style="display:none;" onchange="fotoSec(this,'piA')"></label>
+              </div>
+              <div id="piA" class="photo-status"></div>
+            </div>
+            <div class="video-kutu-ozel">
+              <div class="video-baslik">
+                <span class="video-ikon">🎥</span>
+                <span class="video-baslik-yazi">ARAÇ VİDEO</span>
+                <span class="video-suresi">20 sn</span>
+              </div>
+              <div class="photo-grid">
+                <label class="photo-btn video-btn">🎬 Seç <input type="file" id="pV1" accept="video/*" style="display:none;" onchange="fotoSec(this,'piV')"></label>
+                <label class="photo-btn video-btn">📹 Çek <input type="file" id="pV2" accept="video/*" capture="environment" style="display:none;" onchange="fotoSec(this,'piV')"></label>
+              </div>
+              <div id="piV" class="photo-status" style="color:#78350f; font-weight:700;"></div>
+            </div>
+          </div>
+
+          <label class="f-label" style="margin-top:6px;">Kaporta Notu (opsiyonel)</label>
+          <textarea id="p-KaportaNotu" class="f-input" rows="1" placeholder="Özel bir durum var mı?"></textarea>
+        </div>
+
+        <!-- ============ BÖLÜM 3: HIZLI MEKANİK KONTROL ============ -->
+        <div style="background:#f0fdf4; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #bbf7d0;">
+          <label class="f-label" style="text-align:center; color:#166534; font-size:14px; margin-bottom:8px;">📍 3. HIZLI MEKANİK KONTROL</label>
+
+          <div class="grid-2">
+            <div>
+              <label class="f-label">Lastik Durumu</label>
+              <select id="p-Lastik" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Kusursuz">Kusursuz</option>
+                <option value="İyi">İyi</option>
+                <option value="Yıpranmış">Yıpranmış</option>
+                <option value="Değişmeli">Değişmeli</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Cam Durumu</label>
+              <select id="p-Cam" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Kusursuz">Kusursuz</option>
+                <option value="Çatlak Var">Çatlak Var</option>
+                <option value="Kırık Var">Kırık Var</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Far / Sinyal / Stop</label>
+              <select id="p-Lamba" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Tamamı Çalışıyor">Tamamı Çalışıyor</option>
+                <option value="Eksik Var">Eksik Var</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Klima Durumu</label>
+              <select id="p-Klima" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Çalışıyor">Çalışıyor</option>
+                <option value="Çalışmıyor">Çalışmıyor</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Akü Durumu</label>
+              <select id="p-Aku" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Sağlam">Sağlam</option>
+                <option value="Zayıf">Zayıf</option>
+              </select>
+            </div>
+            <div>
+              <label class="f-label">Genel Mekanik (Ses, Koku)</label>
+              <select id="p-Mekanik" class="f-select">
+                <option value="">Seçiniz...</option>
+                <option value="Normal">Normal</option>
+                <option value="Şüpheli">Şüpheli</option>
+                <option value="Servise Gitmesi Gerekiyor">Servise Gitmesi Gerekiyor</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="f-label" style="margin-top:6px;">Mekanik Notu (sorun varsa açıklayın)</label>
+          <textarea id="p-MekanikNotu" class="f-input" rows="1" placeholder="Sorun olan varsa lütfen açıklayın..."></textarea>
+        </div>
+
+        <div id="p-progress" class="progress-container">
+          <div class="progress-text" id="p-progress-text">Yükleniyor...</div>
+          <div class="progress-bar"><div class="progress-fill" id="p-progress-fill"></div></div>
+        </div>
+
+        <button class="submit-btn" id="btn-periyodik-gonder" onclick="kaydetPeriyodik()">Kontrol Raporunu Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== KM =============== -->
+  <div id="ekran-km" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeKM"></div>
+    <div class="form-area">
+      <div class="form-group active">
+        <label class="f-label">⏲️ GÜNCEL KM BİLGİSİ</label>
+        <input type="number" id="km-Bilgi" class="f-input" placeholder="Güncel KM'yi yazınız">
+        <button class="submit-btn" onclick="kaydetKM()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== LİNKLER =============== -->
+  <div id="ekran-linkler" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
+    </div>
+    <div id="aracKunyeLinkler"></div>
+    <div class="form-area">
+      <div class="form-group active">
+        <div id="linkler-listesi" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="text-align:center; color:#64748b; font-weight:700; padding:20px;">Linkler yükleniyor...</div>
+        </div>
+      </div>
+    </div>
+  </div>

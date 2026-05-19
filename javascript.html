@@ -1,0 +1,2415 @@
+<!--
+╔════════════════════════════════════════════════════════════════╗
+║  İBB HALK SÜT - FİLO YÖNETİM SİSTEMİ                            ║
+║  Dosya: javascript.html                                          ║
+║  Görevi: Tüm frontend JavaScript fonksiyonları                   ║
+║                                                                   ║
+║  İÇERİK:                                                         ║
+║    - Yönetici doğrulama                                           ║
+║    - Ekran geçişleri                                              ║
+║    - Plaka + Ad Soyad kontrolü (akıllı arama)                    ║
+║    - Araç künyesi yönetimi (saha + sticky)                        ║
+║    - Saha giriş kontrolü                                          ║
+║    - 8 saha modülünün kaydet fonksiyonları                       ║
+║    - Foto yükleme + küçültme (1000px, 0.65 kalite)               ║
+║    - Rapor gönderim (raporla)                                    ║
+║    - Etiket belirleme                                             ║
+║                                                                   ║
+║  Birleştirme: index.html <script>...include('javascript')...     ║
+║  Kuruluş: Yakup + Claude                                         ║
+╚════════════════════════════════════════════════════════════════╝
+-->
+<script>
+// =====================================================================
+// İBB HALK SÜT - FİLO YÖNETİM SİSTEMİ
+// SİSTEM VERSİYONU: 2.0.0
+// FRONTEND JAVASCRIPT
+// =====================================================================
+
+var pastaGrafik = null;
+var aktifAracKunyesi = null;
+var ayarlarCache = {};
+var linklerCache = [];
+
+// === BAŞLANGIÇ ===
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof google !== 'undefined' && google.script) {
+    google.script.run
+      .withSuccessHandler(ayarlariUygula)
+      .withFailureHandler(function(err) {
+        gUyari("HATA", "Ayarlar yüklenemedi: " + err.message);
+      })
+      .getAyarlar();
+  } else {
+    // Test ortamı
+    setTimeout(function() {
+      ayarlariUygula({
+        "Araç Plakası": ["34 TEST 01", "34 TEST 02"],
+        "Servis Götüren Kişi": ["Zimmet Sahibi", "Geçici Kullanıcı", "Diğer"],
+        "Servis Gidiş Şekli": ["Araç Şikayet Sebebi İle", "Çekici İle", "Kaza Sonucu Çekici İle"],
+        "Servise Gidiş Nedeni": ["Periyodik Bakım", "Arıza", "Kaza", "Lastik", "Mekanik", "Kaporta", "Elektrik", "Cam", "Diğer"]
+      });
+    }, 300);
+  }
+
+  // Kaza tarihi otomatik doldurma
+  var kZaman = document.getElementById('k-Zaman');
+  if (kZaman) {
+    kZaman.addEventListener('focus', function() {
+      if (!this.value) {
+        var n = new Date();
+        n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+        this.value = n.toISOString().slice(0, 16);
+      }
+    });
+  }
+});
+
+// === AYARLARI UYGULA ===
+function ayarlariUygula(ayarlar) {
+  if (!ayarlar || Object.keys(ayarlar).length === 0) {
+    gUyari("HATA", "Ayarlar sayfasından veri okunamadı!");
+    return;
+  }
+
+  ayarlarCache = ayarlar;
+
+  function doldur(id, anahtar, ilk) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">' + ilk + '</option>';
+    var liste = ayarlar[anahtar];
+    if (liste) liste.forEach(function(item) {
+      if (item && item.toString().trim()) {
+        var o = document.createElement("option");
+        o.value = item;
+        o.text = item;
+        el.appendChild(o);
+      }
+    });
+  }
+
+  doldur("pSelect", "Araç Plakası",            "PLAKA SEÇİNİZ");
+  doldur("s-Kim",   "Servis Götüren Kişi",     "Seçiniz...");
+  doldur("s-Acil",  "Servis Gidiş Şekli",      "Seçiniz...");
+  doldur("s-Neden", "Servise Gidiş Nedeni",    "Seçiniz...");
+
+  // Linkler
+  if (ayarlar["Online Linkler"]) {
+    linkleriYukle(ayarlar["Online Linkler"]);
+  }
+}
+
+function linkleriYukle(linkler) {
+  var konteyner = document.getElementById('linkler-listesi');
+  if (!konteyner) return;
+  
+  konteyner.innerHTML = "";
+  linkler.forEach(function(link) {
+    var parcalar = link.split("|");
+    var ad = parcalar[0] || link;
+    var url = parcalar[1] || "#";
+    
+    var a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.className = "f-input";
+    a.style.cssText = "text-decoration:none; color:var(--brand-blue); font-weight:700; display:block;";
+    a.innerHTML = "🔗 " + ad;
+    konteyner.appendChild(a);
+  });
+}
+
+// === MODAL ===
+function gUyari(b, m) {
+  document.getElementById("modalB").innerText = b;
+  document.getElementById("modalM").innerText = m;
+  document.getElementById("customAlert").style.display = "flex";
+}
+
+function kapatUyari() {
+  document.getElementById("customAlert").style.display = "none";
+}
+
+// === EKRAN DEĞİŞTİR ===
+function ekranDegistir(h) {
+  document.querySelectorAll('.screen').forEach(function(e) {
+    e.classList.remove('active');
+  });
+  var hedef = document.getElementById(h);
+  if (hedef) hedef.classList.add('active');
+  window.scrollTo(0, 0);
+  
+  if (h === 'ekran-yonetici-giris') {
+    document.getElementById('y-Sifre').value = "";
+  }
+  
+  // Araç künyesini ilgili ekrana koy
+  if (aktifAracKunyesi && h !== 'ekran-vitrin' && h !== 'ekran-yonetici-giris' && h !== 'ekran-yonetici-panel' && h !== 'ekran-rapor') {
+    var konteynerId = "aracKunye" + h.replace('ekran-', '').charAt(0).toUpperCase() + h.replace('ekran-', '').slice(1);
+    if (h === 'ekran-saha') konteynerId = 'aracKunyeKonteyner';
+    var konteyner = document.getElementById(konteynerId);
+    if (konteyner) {
+      // Saha ana ekranda tam, alt modüllerde KOMPAKT görünüm
+      var kompaktMi = (h !== 'ekran-saha');
+      konteyner.innerHTML = aracKunyeHtml(aktifAracKunyesi, kompaktMi);
+    }
+  }
+}
+
+// === SAHA GİRİŞ: PLAKA + İSİM KONTROLÜ (Saha ekranındaki) ===
+function sahaGirisKontrol() {
+  var plaka = document.getElementById("pSelect").value;
+  var isim = document.getElementById("uName").value.trim();
+  
+  // Akıllı isim kontrolü: en az 2 kelime + 2. kelimenin ilk harfi
+  // Örn: "AHMET Y" → aktif, "AHMET" → değil, "AH" → değil
+  var kelimeler = isim.split(/\s+/).filter(function(k) { return k.length > 0; });
+  var isimGecerli = (kelimeler.length >= 2 && kelimeler[0].length >= 2 && kelimeler[1].length >= 1);
+  
+  var aktif = (plaka && isimGecerli);
+  var uyari = document.getElementById("sahaUyariBand");
+  
+  document.querySelectorAll('.saha-modul-btn').forEach(function(btn) {
+    btn.classList.toggle('aktif', aktif);
+  });
+  
+  if (aktif) {
+    if (uyari) {
+      uyari.style.display = "none";
+    }
+    
+    // Araç künyesini çek
+    if (typeof google !== 'undefined' && google.script) {
+      // İSKELET ANİMASYON: Veri gelene kadar göster
+      var konteyner = document.getElementById("aracKunyeKonteyner");
+      if (konteyner) konteyner.innerHTML = aracKunyeSkeleton();
+      
+      google.script.run
+        .withSuccessHandler(function(kunye) {
+          aktifAracKunyesi = kunye;
+          var konteyner = document.getElementById("aracKunyeKonteyner");
+          if (konteyner) konteyner.innerHTML = aracKunyeHtml(kunye);
+        })
+        .withFailureHandler(function(err) {
+          var konteyner = document.getElementById("aracKunyeKonteyner");
+          if (konteyner) konteyner.innerHTML = "";
+        })
+        .getAracKunyesi(plaka);
+    }
+  } else {
+    if (uyari) {
+      uyari.style.display = "";
+      uyari.classList.remove('aktif');
+      uyari.querySelector('span').innerHTML = "⚠ PLAKA VE İSİM GİRİLİNCE BUTONLAR AKTİFLEŞİR";
+    }
+    aktifAracKunyesi = null;
+    var konteyner = document.getElementById("aracKunyeKonteyner");
+    if (konteyner) konteyner.innerHTML = "";
+  }
+}
+
+// === SAHA MODÜL AÇ — Plaka+İsim girilmeden açılmaz ===
+function sahaModulAc(hedefEkran) {
+  var plaka = document.getElementById("pSelect").value;
+  var isim = document.getElementById("uName").value.trim();
+  
+  var kelimeler = isim.split(/\s+/).filter(function(k) { return k.length > 0; });
+  var isimGecerli = (kelimeler.length >= 2 && kelimeler[0].length >= 2 && kelimeler[1].length >= 1);
+  
+  if (!plaka || !isimGecerli) {
+    gUyari("KURAL İHLALİ", "LÜTFEN ÖNCE PLAKA VE AD SOYAD BİLGİLERİNİ GİRİNİZ.");
+    return;
+  }
+  
+  ekranDegistir(hedefEkran);
+}
+
+// === ARAÇ KÜNYESİ HTML ===
+/**
+ * Künye yüklenirken gösterilen iskelet animasyon (skeleton loader).
+ * Saha ana ekranda → TAM mod skeleton (sarı kart)
+ * Alt modüllerde → KOMPAKT mod skeleton (lacivert + altın)
+ */
+function aracKunyeSkeleton(kompakt) {
+  if (kompakt) {
+    return '<div class="arac-kunye-kompakt skeleton-kunye">' +
+      '<div class="kompakt-bant">' +
+        '<div class="kompakt-sol">' +
+          '<div class="kompakt-plaka skeleton-shimmer" style="background:linear-gradient(135deg,#fde68a 0%,#d97706 50%,#92400e 100%); min-width:90px;">&nbsp;</div>' +
+          '<div class="kompakt-icerik">' +
+            '<div style="display:flex; align-items:center; gap:10px; flex:1;">' +
+              '<div class="kompakt-ikon-kutu">📋</div>' +
+              '<div class="kompakt-sofor-blok">' +
+                '<div class="kompakt-label">YÜKLENİYOR...</div>' +
+                '<div class="kompakt-sofor skeleton-shimmer" style="height:14px; width:120px; background:rgba(255,255,255,0.2); border-radius:4px;">&nbsp;</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  // Tam mod (saha ana ekran)
+  return '<div class="arac-kunye skeleton-kunye-tam">' +
+    '<div class="arac-kunye-ust">' +
+      '<div class="arac-kunye-baslik">📋 ARAÇ KÜNYESİ YÜKLENİYOR...</div>' +
+      '<div class="arac-kunye-plaka skeleton-shimmer">&nbsp;&nbsp;&nbsp;&nbsp;</div>' +
+    '</div>' +
+    '<div class="arac-kunye-icerik">' +
+      '<div class="arac-kunye-satirlar">' +
+        '<div class="arac-kunye-satir"><span class="lbl">Zimmet Sahibi:</span><span class="val skeleton-shimmer" style="display:inline-block; width:120px; height:14px; border-radius:4px;">&nbsp;</span></div>' +
+        '<div class="arac-kunye-satir"><span class="lbl">Ekip Sorumlusu:</span><span class="val skeleton-shimmer" style="display:inline-block; width:140px; height:14px; border-radius:4px;">&nbsp;</span></div>' +
+        '<div class="arac-kunye-satir"><span class="lbl">Çalışma Bölgesi:</span><span class="val skeleton-shimmer" style="display:inline-block; width:130px; height:14px; border-radius:4px;">&nbsp;</span></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function aracKunyeHtml(kunye, kompakt) {
+  if (!kunye || kunye.hata) return "";
+  
+  var uyumsuzClass = kunye.bolgeUyusmazligi ? "uyumsuz" : "";
+  var uyariMetni = "";
+  
+  // Veriler — boşsa "Yok" yaz
+  var zimmet = kunye.zimmetliKisi || "Yok";
+  var ekip = (kunye.guncelEkipSorumlusu || kunye.tanimliEkipSorumlusu || "Yok");
+  var bolge = (kunye.guncelBolge || kunye.tanimliBolge || "Yok");
+  var plaka = kunye.plaka || "-";
+  
+  // Zimmet linki butonu
+  var linkBtn = "";
+  if (kunye.zimmetLinki && kunye.zimmetLinki.toString().trim() !== "") {
+    linkBtn = '<a href="' + kunye.zimmetLinki + '" target="_blank" class="arac-kunye-link-btn aktif">📄 Zimmet Belgesi Kontrol Linki</a>';
+  } else {
+    linkBtn = '<div class="arac-kunye-link-btn">📄 Link Bekleniyor...</div>';
+  }
+  
+  // === KOMPAKT MOD — Alt modüller için (Tasarım B: Lacivert + Altın) ===
+  if (kompakt) {
+    return '<div class="arac-kunye-kompakt ' + uyumsuzClass + '" id="aracKunyeKompakt">' +
+      '<div class="kompakt-bant" onclick="kunyeAcKapat()">' +
+        '<div class="kompakt-sol">' +
+          '<div class="kompakt-plaka">' + plaka + '</div>' +
+          '<div class="kompakt-icerik">' +
+            '<div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">' +
+              '<div class="kompakt-ikon-kutu">📋</div>' +
+              '<div class="kompakt-sofor-blok">' +
+                '<div class="kompakt-label">Zimmetli Şoför</div>' +
+                '<div class="kompakt-sofor">' + zimmet + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<span class="kompakt-ok" id="kunyeOk">▼</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="kompakt-detay" id="kunyeDetay" style="display:none;">' +
+        '<div class="kompakt-detay-icerik">' +
+          '<div class="kompakt-satirlar">' +
+            '<div class="arac-kunye-satir"><span class="lbl">Zimmet Sahibi:</span><span class="val">' + zimmet + '</span></div>' +
+            '<div class="arac-kunye-satir"><span class="lbl">Ekip Sorumlusu:</span><span class="val">' + ekip + '</span></div>' +
+            '<div class="arac-kunye-satir"><span class="lbl">Çalışma Bölgesi:</span><span class="val">' + bolge + '</span></div>' +
+          '</div>' +
+          '<div class="kompakt-link-yan">' + linkBtn + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  
+  // === TAM MOD — Saha İşlemleri ana ekran için ===
+  return '<div class="arac-kunye ' + uyumsuzClass + '">' +
+    '<div class="arac-kunye-ust">' +
+      '<div class="arac-kunye-baslik">📋 ARAÇ KÜNYESİ' + uyariMetni + '</div>' +
+      '<div class="arac-kunye-plaka">' + plaka + '</div>' +
+    '</div>' +
+    '<div class="arac-kunye-icerik">' +
+      '<div class="arac-kunye-satirlar">' +
+        '<div class="arac-kunye-satir"><span class="lbl">Zimmet Sahibi:</span><span class="val">' + zimmet + '</span></div>' +
+        '<div class="arac-kunye-satir"><span class="lbl">Ekip Sorumlusu:</span><span class="val">' + ekip + '</span></div>' +
+        '<div class="arac-kunye-satir"><span class="lbl">Çalışma Bölgesi:</span><span class="val">' + bolge + '</span></div>' +
+      '</div>' +
+      linkBtn +
+    '</div>' +
+    '</div>';
+}
+
+// === KÜNYE AÇ/KAPAT (kompakt mod için) ===
+function kunyeAcKapat() {
+  var detay = document.getElementById("kunyeDetay");
+  var ok = document.getElementById("kunyeOk");
+  var kompakt = document.getElementById("aracKunyeKompakt");
+  if (!detay) return;
+  
+  if (detay.style.display === "none") {
+    detay.style.display = "block";
+    if (ok) ok.textContent = "▲";
+    // Detay açılınca tamamının görünmesi için yumuşak scroll
+    setTimeout(function() {
+      if (kompakt) {
+        kompakt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  } else {
+    detay.style.display = "none";
+    if (ok) ok.textContent = "▼";
+  }
+}
+
+// === FOTOĞRAF SEÇ ===
+function fotoSec(inputEl, statusId) {
+  if (inputEl.files.length > 5) {
+    gUyari("HATA", "Maksimum 5 dosya seçebilirsiniz!");
+    inputEl.value = "";
+    return;
+  }
+  document.getElementById(statusId).innerText = "✅ " + inputEl.files.length + " dosya seçildi.";
+}
+
+// === CLIENT-SIDE FOTOĞRAF RESIZE ===
+function fotoKucult(file, callback) {
+  if (file.type.indexOf("video") !== -1) {
+    // Video sıkıştırılmıyor
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      callback({
+        data: e.target.result.split(',')[1],
+        mimeType: file.type
+      });
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxWidth = 1000;
+      var oran = img.width / img.height;
+      
+      var w = img.width;
+      var h = img.height;
+      
+      if (w > maxWidth) {
+        w = maxWidth;
+        h = w / oran;
+      }
+      
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      
+      var resizedData = canvas.toDataURL('image/jpeg', 0.65);
+      callback({
+        data: resizedData.split(',')[1],
+        mimeType: 'image/jpeg'
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// === DOSYALARI HAZIRLA (Resize + Etiket) ===
+function dosyalariHazirla(inputIdleri, progressId, callback) {
+  var tumFotograflar = [];
+  var inputIdListesi = Array.isArray(inputIdleri) ? inputIdleri : [inputIdleri];
+  var bekleyen = 0;
+  var tamamlanan = 0;
+
+  inputIdListesi.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.files) bekleyen += el.files.length;
+  });
+
+  if (bekleyen === 0) {
+    callback([]);
+    return;
+  }
+
+  var toplam = bekleyen;
+
+  function progressGuncelle() {
+    if (progressId) {
+      var yuzde = Math.round((tamamlanan / toplam) * 100);
+      var fill = document.getElementById(progressId + '-fill');
+      var text = document.getElementById(progressId + '-text');
+      if (fill) fill.style.width = yuzde + '%';
+      if (text) text.innerText = "Yükleniyor: " + tamamlanan + "/" + toplam + " (%" + yuzde + ")";
+    }
+  }
+
+  inputIdListesi.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el || !el.files || el.files.length === 0) return;
+
+    for (var i = 0; i < el.files.length; i++) {
+      (function(dosya, kaynakId) {
+        fotoKucult(dosya, function(kucultulmus) {
+          var etiket = etiketBelirle(kaynakId);
+          tumFotograflar.push({
+            data: kucultulmus.data,
+            mimeType: kucultulmus.mimeType,
+            etiket: etiket
+          });
+          tamamlanan++;
+          progressGuncelle();
+          
+          if (tamamlanan === toplam) {
+            callback(tumFotograflar);
+          }
+        });
+      })(el.files[i], id);
+    }
+  });
+}
+
+function etiketBelirle(kaynakId) {
+  if (kaynakId === "pF1" || kaynakId === "pF2") {
+    var val = document.getElementById("p-Giydirme").value;
+    return val ? "GİYDİRME (" + val.toUpperCase() + ")" : "GİYDİRME";
+  }
+  if (kaynakId === "pC1" || kaynakId === "pC2") return "ÖN VE ARKA CEPHE";
+  if (kaynakId === "pY1" || kaynakId === "pY2") return "SAĞ VE SOL YANLAR";
+  if (kaynakId === "pA1" || kaynakId === "pA2") return "AYNALAR";
+  if (kaynakId === "pV1" || kaynakId === "pV2") return "VİDEO";
+  if (kaynakId.indexOf("TF") !== -1) return "TUTANAK";
+  if (kaynakId.indexOf("OF") !== -1) return "ONARIM";
+  if (kaynakId.indexOf("sF") !== -1 || kaynakId.indexOf("eF") !== -1) return "EVRAK";
+  if (kaynakId.indexOf("F") !== -1) return "HASAR";
+  return "FOTO";
+}
+
+// === RAPOR GÖNDER ===
+function raporla(modul, detayObjesi, fotoInputIdleri, progressId, btnId) {
+  if (btnId) document.getElementById(btnId).disabled = true;
+  if (progressId) document.getElementById(progressId).style.display = 'block';
+
+  dosyalariHazirla(fotoInputIdleri || [], progressId, function(fotografDizisi) {
+    var payload = Object.assign({
+      "Bildiren Kullanıcı": document.getElementById("uName").value,
+      "Araç Plakası":       document.getElementById("pSelect").value,
+      "İşlem Kategorisi":   modul,
+      "fotograflar":        fotografDizisi
+    }, detayObjesi);
+
+    if (typeof google !== 'undefined' && google.script) {
+      google.script.run
+        .withSuccessHandler(function(sonuc) {
+          if (progressId) document.getElementById(progressId).style.display = 'none';
+          if (btnId) document.getElementById(btnId).disabled = false;
+          
+          if (sonuc && sonuc.basarili) {
+            gUyari("RAPOR GÖNDERİLDİ", "✅ " + sonuc.mesaj);
+          } else {
+            gUyari("HATA", "❌ " + (sonuc.mesaj || "Bilinmeyen hata"));
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (progressId) document.getElementById(progressId).style.display = 'none';
+          if (btnId) document.getElementById(btnId).disabled = false;
+          gUyari("HATA", "Sunucu hatası: " + err.message);
+        })
+        .raporuKaydet(payload);
+    } else {
+      setTimeout(function() {
+        if (progressId) document.getElementById(progressId).style.display = 'none';
+        if (btnId) document.getElementById(btnId).disabled = false;
+        gUyari("RAPOR GÖNDERİLDİ", "✅ Test ortamında başarıyla kaydedildi.");
+      }, 1000);
+    }
+  });
+}
+
+// === YÖNETİCİ ===
+// === AKTİF KULLANICI BİLGİSİ (Global) ===
+var aktifKullanici = null;
+
+function yoneticiKontrolEt() {
+  var kullaniciAdi = document.getElementById("y-Kullanici").value.trim();
+  var sifre = document.getElementById("y-Sifre").value;
+  var hataAlani = document.getElementById("y-login-hata");
+  
+  if (hataAlani) hataAlani.innerText = "";
+  
+  if (!kullaniciAdi) {
+    if (hataAlani) hataAlani.innerText = "⚠️ Kullanıcı adı giriniz";
+    return;
+  }
+  if (!sifre) {
+    if (hataAlani) hataAlani.innerText = "⚠️ Şifre giriniz";
+    return;
+  }
+  
+  // Butonu pasifleştir (çift tıklama önle)
+  var btn = document.querySelector(".y-login-btn");
+  if (btn) {
+    btn.innerText = "GİRİŞ YAPILIYOR...";
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+  }
+  
+  if (typeof google !== 'undefined' && google.script) {
+    google.script.run
+      .withSuccessHandler(function(cevap) {
+        // Butonu eski haline getir
+        if (btn) {
+          btn.innerText = "GİRİŞ YAP";
+          btn.disabled = false;
+          btn.style.opacity = "1";
+        }
+        
+        if (cevap.basarili) {
+          aktifKullanici = cevap;
+          
+          // Yönetim Merkezi başlığına kullanıcı bilgisi koy
+          var adAlan = document.getElementById('aktifYonetici');
+          if (adAlan) {
+            var gosterilecekAd = cevap.adSoyad || cevap.kullaniciAdi || "Kullanıcı";
+            adAlan.innerText = gosterilecekAd;
+          }
+          
+          var rolAlan = document.getElementById('aktifYoneticiRol');
+          if (rolAlan) rolAlan.innerText = (cevap.rol || "—").toUpperCase();
+          
+          // Şifre alanını temizle (güvenlik)
+          document.getElementById("y-Sifre").value = "";
+          
+          // Rol bazlı UI ayarla
+          yetkiUIGuncelle();
+          
+          // Eğer Raporlama tıklanmıştı, giriş sonrası direkt rapora git (sadece Admin)
+          if (window._raporlamaSonrasi) {
+            window._raporlamaSonrasi = false;
+            var rol = (cevap.rol || "").toLowerCase();
+            if (rol === "admin") {
+              raporlamaAc();
+              return;
+            } else {
+              gUyari("YETKİ", "Raporlama Merkezi sadece Admin yetkili kullanıcılar için.");
+            }
+          }
+          
+          // Yönetim panelini aç
+          ekranDegistir('ekran-yonetici-panel');
+          yoneticiVeriCek();
+        } else {
+          if (hataAlani) hataAlani.innerText = "❌ " + (cevap.hata || "Giriş başarısız");
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (btn) {
+          btn.innerText = "GİRİŞ YAP";
+          btn.disabled = false;
+          btn.style.opacity = "1";
+        }
+        if (hataAlani) hataAlani.innerText = "⚠️ Sistem hatası";
+      })
+      .kullaniciDogrula(kullaniciAdi, sifre);
+  }
+}
+
+/**
+ * Rol bazlı UI gizleme/gösterme.
+ * Yetki kontrolü artık raporlamaGirisKontrol() ile yapılıyor.
+ * Bu fonksiyon ileride başka UI öğeleri için kullanılabilir.
+ */
+function yetkiUIGuncelle() {
+  if (!aktifKullanici) return;
+  // Şu an boş — raporlamaGirisKontrol() yetki kontrolünü kendisi yapıyor
+  // Gelecekte rol bazlı başka UI ayarları buraya gelebilir
+}
+
+/**
+ * Yönetici çıkış işlemi.
+ * Aktif kullanıcı bilgisini siler, vitrine döner.
+ */
+function cikisYap() {
+  aktifKullanici = null;
+  
+  // Başlık alanlarını temizle
+  var adAlan = document.getElementById('aktifYonetici');
+  if (adAlan) adAlan.innerText = "—";
+  var rolAlan = document.getElementById('aktifYoneticiRol');
+  if (rolAlan) rolAlan.innerText = "—";
+  
+  // Şifre ve kullanıcı alanlarını temizle
+  var sifreAlan = document.getElementById("y-Sifre");
+  if (sifreAlan) sifreAlan.value = "";
+  var kullaniciAlan = document.getElementById("y-Kullanici");
+  if (kullaniciAlan) kullaniciAlan.value = "";
+  
+  ekranDegistir('ekran-vitrin');
+}
+
+function yoneticiVeriCek() {
+  if (typeof google === 'undefined' || !google.script) return;
+  
+  // Yönetim Merkezi (sade) verisini çek
+  google.script.run
+    .withSuccessHandler(function(veri) {
+      if (veri && !veri.hata) {
+        yonetimMerkeziRender(veri);
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("Yönetim Merkezi veri hatası:", err);
+    })
+    .dashboardVerisiOku();
+  
+  // Aşama 1.5: Bekleyen onayları da yükle
+  bekleyenOnaylariYukle();
+}
+
+/**
+ * Yönetim Merkezi — Sade görünüm.
+ * Yardımcılar + Admin görür. Bekleyen onaylar + Acil durumlar.
+ */
+function yonetimMerkeziRender(veri) {
+  // 3 hızlı bilgi
+  setText("ym-bugun", veri.bugunKayit || 0);
+  setText("ym-bekleyen", veri.bekleyenOnay || 0);
+  setText("ym-acil", veri.acilDurumSayisi || 0);
+  
+  // Acil Durumlar
+  var acilKutu = document.getElementById("ym-acilKutu");
+  var acilListe = document.getElementById("ym-acilListe");
+  var acilRozet = document.getElementById("ym-acilRozet");
+  
+  if (veri.acilDurumlar && veri.acilDurumlar.length > 0) {
+    if (acilKutu) acilKutu.style.display = "block";
+    if (acilRozet) acilRozet.innerText = veri.acilDurumlar.length;
+    if (acilListe) {
+      acilListe.innerHTML = veri.acilDurumlar.map(function(item) {
+        var tarih = item.tarih ? formatTarih(item.tarih) : "";
+        return '<div class="acil-item">' +
+                 '<div class="acil-item-sol">' +
+                   '<span class="acil-item-plaka">' + (item.plaka || "—") + '</span>' +
+                   '<span>' + (item.aciklama || "") + '</span>' +
+                 '</div>' +
+                 '<span class="acil-item-tarih">' + tarih + '</span>' +
+               '</div>';
+      }).join('');
+    }
+  } else {
+    if (acilKutu) acilKutu.style.display = "none";
+  }
+  
+  // Bekleyen Onaylar Rozet
+  var onayRozet = document.getElementById("ym-onayRozet");
+  if (onayRozet) onayRozet.innerText = veri.bekleyenOnay || 0;
+  
+  setText("ym-sonGuncelleme", "Son güncelleme: " + (veri.sonGuncelleme || "—"));
+}
+
+/**
+ * Yönetim Merkezi — Yenile butonu
+ */
+function yonetimYenile() {
+  yoneticiVeriCek();
+  bekleyenOnaylariYukle();
+  gunlukDurumYukle();
+}
+
+// ============================================================
+// AŞAMA B — GÜNLÜK ARAÇ DURUMU
+// ============================================================
+
+/**
+ * Backend'den günlük araç durumunu çeker ve render eder.
+ */
+function gunlukDurumYukle() {
+  if (typeof google === 'undefined' || !google.script) {
+    return; // Test ortamı
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (!sonuc || !sonuc.basarili) {
+        gunlukDurumHataGoster(sonuc ? sonuc.mesaj : "Veri alınamadı");
+        return;
+      }
+      gunlukDurumRender(sonuc);
+    })
+    .withFailureHandler(function(err) {
+      gunlukDurumHataGoster(err.message);
+    })
+    .gunlukDurumGetir();
+}
+
+/**
+ * Günlük durum verisini ekrana render eder.
+ */
+function gunlukDurumRender(sonuc) {
+  var grid = document.getElementById("ym-gunlukGrid");
+  var tarihAlan = document.getElementById("ym-gunlukTarih");
+  
+  if (tarihAlan) tarihAlan.innerText = sonuc.sonGuncelleme || "";
+  if (!grid) return;
+  
+  if (!sonuc.durumlar || sonuc.durumlar.length === 0) {
+    grid.innerHTML = '<div class="gunluk-durum-bos">📭 Bugün için veri yok</div>';
+    return;
+  }
+  
+  var html = sonuc.durumlar.map(function(d) {
+    // Bölge detay satırı (sadece avr/and varsa göster)
+    var detay = [];
+    if (d.avr   && d.avr   > 0) detay.push('AVR:' + d.avr);
+    if (d.and   && d.and   > 0) detay.push('AND:' + d.and);
+    if (d.genel && d.genel > 0 && (d.avr || d.and)) detay.push('GENEL:' + d.genel);
+    var detayHtml = detay.length > 0 
+      ? '<div class="gunluk-durum-detay">' + detay.join(' · ') + '</div>'
+      : '';
+    
+    return '<div class="gunluk-durum-mini gunluk-durum-' + d.sinif + '">' +
+             '<div class="gunluk-durum-mini-ikon">' + d.ikon + '</div>' +
+             '<div class="gunluk-durum-mini-sayi">' + d.toplam + '</div>' +
+             '<div class="gunluk-durum-mini-ad">' + escapeHtml(d.ad) + '</div>' +
+             detayHtml +
+           '</div>';
+  }).join('');
+  
+  grid.innerHTML = html;
+}
+
+/**
+ * Hata durumunda mesaj göster.
+ */
+function gunlukDurumHataGoster(mesaj) {
+  var grid = document.getElementById("ym-gunlukGrid");
+  if (grid) {
+    grid.innerHTML = '<div class="gunluk-durum-bos">⚠️ ' + escapeHtml(mesaj || "Veri yüklenemedi") + '</div>';
+  }
+}
+
+// ============================================================
+// AŞAMA 1.5 — BEKLEYEN ONAYLAR YÖNETİMİ
+// ============================================================
+
+// Aktif red işlemi için geçici state
+var _redIslemi = { satirNo: null, plaka: null, kategori: null };
+
+/**
+ * Bekleyen onayları sunucudan çeker ve listeye render eder.
+ */
+function bekleyenOnaylariYukle() {
+  var liste = document.getElementById("ym-onayListe");
+  var rozet = document.getElementById("ym-onayRozet");
+  if (!liste) return;
+  
+  // Yükleniyor durumu
+  liste.innerHTML = '<div class="onay-yukleniyor">⏳ Bekleyen onaylar yükleniyor...</div>';
+  
+  if (typeof google === 'undefined' || !google.script) {
+    // Test ortamı
+    liste.innerHTML = '<div class="onay-bos">Test ortamında veri çekilemiyor.</div>';
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (!sonuc || !sonuc.basarili) {
+        liste.innerHTML = '<div class="onay-bos">⚠️ Liste yüklenemedi: ' + (sonuc.mesaj || "bilinmeyen hata") + '</div>';
+        if (rozet) rozet.innerText = "0";
+        return;
+      }
+      
+      bekleyenOnaylariRender(sonuc.liste || []);
+    })
+    .withFailureHandler(function(err) {
+      liste.innerHTML = '<div class="onay-bos">⚠️ Sunucu hatası: ' + err.message + '</div>';
+      if (rozet) rozet.innerText = "0";
+    })
+    .bekleyenOnaylariGetir();
+}
+
+/**
+ * Bekleyen onay listesini HTML olarak ekrana yazar.
+ */
+function bekleyenOnaylariRender(liste) {
+  var liste_el = document.getElementById("ym-onayListe");
+  var rozet = document.getElementById("ym-onayRozet");
+  if (!liste_el) return;
+  
+  if (rozet) rozet.innerText = liste.length;
+  
+  if (liste.length === 0) {
+    liste_el.innerHTML = '<div class="onay-bos">✅ Bekleyen onay bulunmuyor</div>';
+    return;
+  }
+  
+  var htmlParcalari = liste.map(function(item) {
+    // Kategori ikonu
+    var ikon = "📋";
+    var kat = (item.kategori || "").toUpperCase();
+    if (kat.indexOf("ZİMMET") !== -1) ikon = "📋";
+    else if (kat.indexOf("GEÇİCİ") !== -1) ikon = "🔄";
+    else if (kat.indexOf("KAZA") !== -1 || kat.indexOf("HASAR") !== -1) ikon = "🚨";
+    else if (kat.indexOf("SERVİS") !== -1) ikon = "🔧";
+    else if (kat.indexOf("ENVANTER") !== -1) ikon = "📦";
+    else if (kat.indexOf("PERİYODİK") !== -1) ikon = "🔍";
+    else if (kat.indexOf("KM") !== -1) ikon = "⏲️";
+    else if (kat.indexOf("GİYDİRME") !== -1) ikon = "🎨";
+    
+    // Detay HTML'i
+    var detayHtml = "";
+    if (item.detaylar && item.detaylar.length > 0) {
+      detayHtml = '<div class="onay-kart-detay">' +
+        item.detaylar.map(function(d) {
+          return '<div class="onay-kart-detay-satir">• ' + escapeHtml(d) + '</div>';
+        }).join('') +
+        '</div>';
+    }
+    
+    // Medya rozetleri
+    var medyaHtml = "";
+    var medyalar = [];
+    if (item.fotoSayisi > 0) medyalar.push('<span class="onay-medya-rozet">📷 ' + item.fotoSayisi + ' foto</span>');
+    if (item.videoVar) medyalar.push('<span class="onay-medya-rozet">🎥 video</span>');
+    if (medyalar.length > 0) {
+      medyaHtml = '<div class="onay-kart-medya">' + medyalar.join('') + '</div>';
+    }
+    
+    // Plaka temiz
+    var plakaTemiz = escapeHtml(item.plaka || "—");
+    var kategoriTemiz = escapeHtml(item.kategori || "—");
+    var bildirenTemiz = escapeHtml(item.bildiren || "—");
+    
+    return '<div class="onay-kart" id="onayKart-' + item.satirNo + '">' +
+      '<div class="onay-kart-ust">' +
+        '<span class="onay-kart-plaka">' + plakaTemiz + '</span>' +
+        '<span class="onay-kart-kategori">' + ikon + ' ' + kategoriTemiz + '</span>' +
+        '<span class="onay-kart-tarih">' + escapeHtml(item.tarih) + ' ' + escapeHtml(item.saat) + '</span>' +
+      '</div>' +
+      '<div class="onay-kart-bildiren">' +
+        '<span class="onay-kart-bildiren-ikon">👤</span>' +
+        '<span>' + bildirenTemiz + '</span>' +
+      '</div>' +
+      detayHtml +
+      medyaHtml +
+      '<div class="onay-kart-btnlar">' +
+        '<button class="onay-btn onay-btn-onay" onclick="onayVerTekli(' + item.satirNo + ', \'' + plakaTemiz.replace(/'/g, "\\'") + '\')">✅ ONAYLA</button>' +
+        '<button class="onay-btn onay-btn-red" onclick="redModalAc(' + item.satirNo + ', \'' + plakaTemiz.replace(/'/g, "\\'") + '\', \'' + kategoriTemiz.replace(/'/g, "\\'") + '\')">❌ REDDET</button>' +
+      '</div>' +
+    '</div>';
+  });
+  
+  liste_el.innerHTML = htmlParcalari.join('');
+}
+
+/**
+ * HTML'e güvenli yazım için escape.
+ */
+function escapeHtml(metin) {
+  if (metin === null || metin === undefined) return "";
+  return metin.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Tek bir kaydı onaylar.
+ */
+function onayVerTekli(satirNo, plaka) {
+  if (!aktifKullanici) {
+    gUyari("HATA", "Oturum bulunamadı, lütfen yeniden giriş yapın.");
+    return;
+  }
+  
+  var kart = document.getElementById("onayKart-" + satirNo);
+  if (kart) {
+    // Butonları pasifleştir
+    var btnlar = kart.querySelectorAll(".onay-btn");
+    btnlar.forEach(function(b) { b.disabled = true; });
+    var onayBtn = kart.querySelector(".onay-btn-onay");
+    if (onayBtn) onayBtn.innerText = "⏳ İşleniyor...";
+  }
+  
+  if (typeof google === 'undefined' || !google.script) return;
+  
+  var yoneticiAdi = aktifKullanici.adSoyad || aktifKullanici.kullaniciAdi;
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (sonuc && sonuc.basarili) {
+        // Kartı kayan animasyonla kaldır
+        if (kart) {
+          kart.classList.add("silinir");
+          setTimeout(function() {
+            kart.remove();
+            // Rozet ve sayaç güncelle
+            bekleyenOnaylariSayacGuncelle();
+          }, 300);
+        }
+      } else {
+        gUyari("HATA", sonuc.mesaj || "Onaylama başarısız");
+        // Butonları geri aç
+        if (kart) {
+          var btnlar = kart.querySelectorAll(".onay-btn");
+          btnlar.forEach(function(b) { b.disabled = false; });
+          var onayBtn = kart.querySelector(".onay-btn-onay");
+          if (onayBtn) onayBtn.innerText = "✅ ONAYLA";
+        }
+      }
+    })
+    .withFailureHandler(function(err) {
+      gUyari("HATA", "Sunucu hatası: " + err.message);
+      if (kart) {
+        var btnlar = kart.querySelectorAll(".onay-btn");
+        btnlar.forEach(function(b) { b.disabled = false; });
+        var onayBtn = kart.querySelector(".onay-btn-onay");
+        if (onayBtn) onayBtn.innerText = "✅ ONAYLA";
+      }
+    })
+    .onayVer(satirNo, yoneticiAdi);
+}
+
+/**
+ * Red modalını açar.
+ */
+function redModalAc(satirNo, plaka, kategori) {
+  if (!aktifKullanici) {
+    gUyari("HATA", "Oturum bulunamadı, lütfen yeniden giriş yapın.");
+    return;
+  }
+  
+  _redIslemi.satirNo = satirNo;
+  _redIslemi.plaka = plaka;
+  _redIslemi.kategori = kategori;
+  
+  // Modal içeriği
+  var bilgi = document.getElementById("redModalBilgi");
+  if (bilgi) {
+    bilgi.innerHTML = '<strong>Plaka:</strong> ' + escapeHtml(plaka) + 
+                      '<br><strong>İşlem:</strong> ' + escapeHtml(kategori);
+  }
+  
+  // Textarea temizle
+  var ta = document.getElementById("redModalGerekce");
+  if (ta) {
+    ta.value = "";
+    ta.focus();
+  }
+  
+  // Butonu pasifleştir
+  var btn = document.getElementById("redModalOnaylaBtn");
+  if (btn) btn.disabled = true;
+  
+  // Sayacı sıfırla
+  redModalSayacGuncelle();
+  
+  // Modalı aç
+  var modal = document.getElementById("redModal");
+  if (modal) modal.classList.add("acik");
+}
+
+/**
+ * Red modalını kapatır.
+ */
+function redModalKapat() {
+  var modal = document.getElementById("redModal");
+  if (modal) modal.classList.remove("acik");
+  _redIslemi = { satirNo: null, plaka: null, kategori: null };
+}
+
+/**
+ * Red modalında karakter sayacını günceller.
+ */
+function redModalSayacGuncelle() {
+  var ta = document.getElementById("redModalGerekce");
+  var sayac = document.getElementById("redModalSayac");
+  var btn = document.getElementById("redModalOnaylaBtn");
+  if (!ta || !sayac) return;
+  
+  var uzunluk = ta.value.trim().length;
+  sayac.innerText = uzunluk + " / 5 karakter (minimum)";
+  
+  if (uzunluk >= 5) {
+    sayac.classList.remove("yetersiz");
+    sayac.classList.add("yeterli");
+    if (btn) btn.disabled = false;
+  } else {
+    sayac.classList.remove("yeterli");
+    sayac.classList.add("yetersiz");
+    if (btn) btn.disabled = true;
+  }
+}
+
+/**
+ * Red işlemini sunucuya gönderir.
+ */
+function redModalGonder() {
+  var ta = document.getElementById("redModalGerekce");
+  if (!ta) return;
+  
+  var gerekce = ta.value.trim();
+  if (gerekce.length < 5) {
+    gUyari("HATA", "Red gerekçesi en az 5 karakter olmalı.");
+    return;
+  }
+  
+  if (!_redIslemi.satirNo || !aktifKullanici) {
+    gUyari("HATA", "İşlem bilgisi kayboldu, lütfen tekrar deneyin.");
+    redModalKapat();
+    return;
+  }
+  
+  var satirNo = _redIslemi.satirNo;
+  var btn = document.getElementById("redModalOnaylaBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ GÖNDERİLİYOR...";
+  }
+  
+  if (typeof google === 'undefined' || !google.script) {
+    if (btn) btn.innerText = "REDDET";
+    return;
+  }
+  
+  var yoneticiAdi = aktifKullanici.adSoyad || aktifKullanici.kullaniciAdi;
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (btn) btn.innerText = "REDDET";
+      
+      if (sonuc && sonuc.basarili) {
+        redModalKapat();
+        // Kartı kayan animasyonla kaldır
+        var kart = document.getElementById("onayKart-" + satirNo);
+        if (kart) {
+          kart.classList.add("silinir");
+          setTimeout(function() {
+            kart.remove();
+            bekleyenOnaylariSayacGuncelle();
+          }, 300);
+        }
+      } else {
+        if (btn) btn.disabled = false;
+        gUyari("HATA", sonuc.mesaj || "Red işlemi başarısız");
+      }
+    })
+    .withFailureHandler(function(err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = "REDDET";
+      }
+      gUyari("HATA", "Sunucu hatası: " + err.message);
+    })
+    .onayReddet(satirNo, yoneticiAdi, gerekce);
+}
+
+/**
+ * Acil Durumlar kutusunu (Yönetim Merkezi) açar/kapatır.
+ */
+function acilAcKapat() {
+  var liste = document.getElementById("ym-acilListe");
+  var ok = document.getElementById("ym-acilOk");
+  if (!liste || !ok) return;
+  
+  if (liste.classList.contains("kapali")) {
+    liste.classList.remove("kapali");
+    ok.classList.remove("kapali");
+  } else {
+    liste.classList.add("kapali");
+    ok.classList.add("kapali");
+  }
+}
+
+/**
+ * Bekleyen Onaylar kutusunu açar/kapatır.
+ * Tercih localStorage'da değil session'da tutulur — sayfa yenilenirse varsayılana döner.
+ */
+function bekleyenOnaylarAcKapat() {
+  var liste = document.getElementById("ym-onayListe");
+  var ok = document.getElementById("ym-onayOk");
+  if (!liste || !ok) return;
+  
+  if (liste.classList.contains("kapali")) {
+    liste.classList.remove("kapali");
+    ok.classList.remove("kapali");
+    ok.innerText = "▼";
+  } else {
+    liste.classList.add("kapali");
+    ok.classList.add("kapali");
+    ok.innerText = "▼";
+  }
+}
+
+/**
+ * Onay/red sonrası rozet ve "boş liste" mesajını günceller.
+ */
+function bekleyenOnaylariSayacGuncelle() {
+  var liste_el = document.getElementById("ym-onayListe");
+  var rozet = document.getElementById("ym-onayRozet");
+  if (!liste_el) return;
+  
+  var kalanKartlar = liste_el.querySelectorAll(".onay-kart");
+  if (rozet) rozet.innerText = kalanKartlar.length;
+  
+  if (kalanKartlar.length === 0) {
+    liste_el.innerHTML = '<div class="onay-bos">✅ Bekleyen onay kalmadı</div>';
+  }
+  
+  // Yönetim Merkezi şeridindeki "bekleyen" sayısını da güncelle
+  var seritBekleyen = document.getElementById("ym-bekleyen");
+  if (seritBekleyen) seritBekleyen.innerText = kalanKartlar.length;
+  
+  // 1.6: Geçmiş kutusu açıksa otomatik yenile (yeni log eklendi çünkü)
+  gecmisYenileEgerAcikkenSe();
+}
+
+// =====================================================================
+// AŞAMA 1.6 — ONAY GEÇMİŞİ LOG
+// =====================================================================
+
+// Aktif filtre ve arama durumu
+var _gecmisFiltre = "tum";
+var _gecmisArama = "";
+var _gecmisAramaTimer = null;
+
+/**
+ * Onay Geçmişi kutusunu açar/kapatır.
+ * Açılınca veri çeker (lazy loading).
+ */
+function gecmisAcKapat() {
+  var liste = document.getElementById("ym-gecmisListe");
+  var ok = document.getElementById("ym-gecmisOk");
+  if (!liste || !ok) return;
+  
+  if (liste.classList.contains("kapali")) {
+    // Açılıyor
+    liste.classList.remove("kapali");
+    ok.classList.remove("kapali");
+    // İlk açılışta yükle
+    gecmisYukle();
+  } else {
+    // Kapanıyor
+    liste.classList.add("kapali");
+    ok.classList.add("kapali");
+  }
+}
+
+/**
+ * Filtre butonuna tıklayınca aktif filtre değişir, liste yenilenir.
+ */
+function gecmisFiltreDegistir(btnEl, filtre) {
+  // Tüm butonlardan aktif sınıfı kaldır
+  var tumButonlar = document.querySelectorAll(".gecmis-filtre-btn");
+  tumButonlar.forEach(function(b) { b.classList.remove("aktif"); });
+  
+  // Tıklananı aktif yap
+  if (btnEl) btnEl.classList.add("aktif");
+  
+  _gecmisFiltre = filtre;
+  gecmisYukle();
+}
+
+/**
+ * Arama yapıldığında debounce ile çağrılır (her tuşa basışta sunucuya gitmesin).
+ */
+function gecmisAramaYap() {
+  var input = document.getElementById("ym-gecmisArama");
+  if (!input) return;
+  
+  _gecmisArama = input.value.trim();
+  
+  // Önceki timer'ı iptal et
+  if (_gecmisAramaTimer) clearTimeout(_gecmisAramaTimer);
+  
+  // 400ms bekleyip yükle (kullanıcı yazımı bitirsin)
+  _gecmisAramaTimer = setTimeout(function() {
+    gecmisYukle();
+  }, 400);
+}
+
+/**
+ * Onay Geçmişi listesini sunucudan çeker ve render eder.
+ */
+function gecmisYukle() {
+  var icerik = document.getElementById("ym-gecmisIcerik");
+  var rozet = document.getElementById("ym-gecmisRozet");
+  if (!icerik) return;
+  
+  icerik.innerHTML = '<div class="gecmis-yukleniyor">⏳ Yükleniyor...</div>';
+  
+  if (typeof google === 'undefined' || !google.script) {
+    icerik.innerHTML = '<div class="gecmis-bos">Test ortamında veri çekilemiyor.</div>';
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (!sonuc || !sonuc.basarili) {
+        icerik.innerHTML = '<div class="gecmis-bos">⚠️ Liste yüklenemedi: ' + (sonuc.mesaj || "bilinmeyen hata") + '</div>';
+        if (rozet) rozet.innerText = "0";
+        return;
+      }
+      
+      gecmisRender(sonuc.liste || []);
+    })
+    .withFailureHandler(function(err) {
+      icerik.innerHTML = '<div class="gecmis-bos">⚠️ Sunucu hatası: ' + err.message + '</div>';
+      if (rozet) rozet.innerText = "0";
+    })
+    .onayGecmisiGetir({
+      filtre: _gecmisFiltre,
+      arama: _gecmisArama,
+      limit: 10
+    });
+}
+
+/**
+ * Onay Geçmişi listesini HTML olarak render eder.
+ */
+function gecmisRender(liste) {
+  var icerik = document.getElementById("ym-gecmisIcerik");
+  var rozet = document.getElementById("ym-gecmisRozet");
+  if (!icerik) return;
+  
+  if (rozet) rozet.innerText = liste.length;
+  
+  if (liste.length === 0) {
+    var bosMesaj = "Henüz işlem yok";
+    if (_gecmisArama) bosMesaj = "🔍 '" + escapeHtml(_gecmisArama) + "' için sonuç bulunamadı";
+    else if (_gecmisFiltre === "onay") bosMesaj = "✅ Onaylanan işlem yok";
+    else if (_gecmisFiltre === "red") bosMesaj = "❌ Reddedilen işlem yok";
+    
+    icerik.innerHTML = '<div class="gecmis-bos">' + bosMesaj + '</div>';
+    return;
+  }
+  
+  var htmlParcalari = liste.map(function(item) {
+    var isOnay = (item.karar === "Onaylandı");
+    var kartClass = isOnay ? "onay" : "red";
+    var rozetClass = isOnay ? "onay" : "red";
+    var rozetMetin = isOnay ? "✅ ONAY" : "❌ RED";
+    
+    // Kategori ikonu
+    var ikon = "📋";
+    var kat = (item.kategori || "").toUpperCase();
+    if (kat.indexOf("ZİMMET") !== -1) ikon = "📋";
+    else if (kat.indexOf("GEÇİCİ") !== -1) ikon = "🔄";
+    else if (kat.indexOf("KAZA") !== -1 || kat.indexOf("HASAR") !== -1) ikon = "🚨";
+    else if (kat.indexOf("SERVİS") !== -1) ikon = "🔧";
+    else if (kat.indexOf("ENVANTER") !== -1) ikon = "📦";
+    else if (kat.indexOf("PERİYODİK") !== -1) ikon = "🔍";
+    else if (kat.indexOf("KM") !== -1) ikon = "⏲️";
+    
+    var ustSatir = ikon + " " + escapeHtml(item.kategori || "—");
+    var altSatir = "👤 " + escapeHtml(item.yonetici || "—") + " · 📝 " + escapeHtml(item.bildiren || "—");
+    var tarihSaat = escapeHtml(item.tarih + " " + item.saat);
+    
+    // Ana kart HTML'i
+    var html = '<div class="gecmis-kart ' + kartClass + '">' +
+      '<span class="gecmis-karar-rozet ' + rozetClass + '">' + rozetMetin + '</span>' +
+      '<span class="gecmis-kart-plaka">' + escapeHtml(item.plaka || "—") + '</span>' +
+      '<div class="gecmis-kart-orta">' +
+        '<div class="gecmis-kart-ust-satir">' + ustSatir + '</div>' +
+        '<div class="gecmis-kart-alt-satir">' + altSatir + '</div>' +
+      '</div>' +
+      '<span class="gecmis-kart-tarih">' + tarihSaat + '</span>' +
+    '</div>';
+    
+    // Red gerekçesi varsa altına ek satır
+    if (!isOnay && item.gerekce) {
+      html += '<div class="gecmis-kart-gerekce">💬 ' + escapeHtml(item.gerekce) + '</div>';
+    }
+    
+    return html;
+  });
+  
+  icerik.innerHTML = htmlParcalari.join('');
+}
+
+/**
+ * Yeni onay/red işlemi sonrası geçmiş açıksa otomatik yenilenir.
+ */
+function gecmisYenileEgerAcikkenSe() {
+  var liste = document.getElementById("ym-gecmisListe");
+  if (liste && !liste.classList.contains("kapali")) {
+    gecmisYukle();
+  }
+}
+
+/**
+ * Vitrin'de Raporlama butonuna tıklandığında çağrılır.
+ * Giriş yapılmamışsa → Yönetici Giriş ekranına gönderir
+ * Admin değilse → uyarı verir
+ * Admin ise → Raporlama Merkezi'ne yönlendirir
+ */
+function raporlamaGirisKontrol() {
+  if (!aktifKullanici) {
+    // Giriş yapılmamış → Yönetici Giriş'e yönlendir
+    // Giriş sonrası raporlamaya gitsin diye bayrak koyalım
+    window._raporlamaSonrasi = true;
+    ekranDegistir('ekran-yonetici-giris');
+    return;
+  }
+  
+  var rol = (aktifKullanici.rol || "").toLowerCase();
+  if (rol !== "admin") {
+    gUyari("YETKİ", "Raporlama Merkezi sadece Admin yetkili kullanıcılar için erişilebilir.\n\nSizin yetkiniz: " + aktifKullanici.rol);
+    return;
+  }
+  
+  raporlamaAc();
+}
+
+/**
+ * Raporlama Merkezi'ne giriş — sadece Admin
+ */
+function raporlamaAc() {
+  if (!aktifKullanici || (aktifKullanici.rol || "").toLowerCase() !== "admin") {
+    return;
+  }
+  
+  // Aktif kullanıcı bilgisi
+  var adAlan = document.getElementById('rapor-aktifKullanici');
+  if (adAlan) adAlan.innerText = aktifKullanici.adSoyad || aktifKullanici.kullaniciAdi;
+  
+  ekranDegistir('ekran-rapor');
+  raporlamaVeriCek();
+}
+
+/**
+ * Raporlama Merkezi — Tam dashboard veri akışı
+ */
+function raporlamaVeriCek() {
+  if (typeof google === 'undefined' || !google.script) return;
+  
+  google.script.run
+    .withSuccessHandler(function(veri) {
+      if (veri && !veri.hata) {
+        dashboardRender(veri);
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("Raporlama veri hatası:", err);
+    })
+    .dashboardVerisiOku();
+}
+
+/**
+ * Raporlama Merkezi — Dashboard render (5 kart + acil + raporlar)
+ */
+function dashboardRender(veri) {
+  // 5 kart
+  setText("d-ToplamArac", veri.toplamArac || 0);
+  setText("d-Bugun", veri.bugunKayit || 0);
+  setText("d-Bekleyen", veri.bekleyenOnay || 0);
+  setText("d-Servisteki", veri.servistekiArac || 0);
+  setText("d-Sessiz", veri.sessizArac || 0);
+  setText("d-Acil", veri.acilDurumSayisi || 0);
+  
+  // Modül sayıları (rapor butonlarındaki rozet)
+  var modulHaritasi = {
+    "Zimmet İşlemleri": "r-zimmet",
+    "Geçici Kullanım": "r-gecici",
+    "Kaza/Hasar": "r-kaza",
+    "Servis Kayıt": "r-servis",
+    "Envanter": "r-envanter",
+    "Periyodik Kontrol": "r-periyodik",
+    "KM Bilgisi": "r-km"
+  };
+  
+  if (veri.modulOzetleri && Array.isArray(veri.modulOzetleri)) {
+    veri.modulOzetleri.forEach(function(mod) {
+      var id = modulHaritasi[mod.ad];
+      if (id) setText(id, mod.bekleyen || 0);
+    });
+  }
+  
+  // Son güncelleme bilgisi
+  setText("y-sonGuncelleme", "Son güncelleme: " + (veri.sonGuncelleme || "—"));
+}
+
+function setText(id, deger) {
+  var el = document.getElementById(id);
+  if (el) el.innerText = deger;
+}
+
+function formatTarih(tarih) {
+  try {
+    var d = new Date(tarih);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
+  } catch (e) { return ""; }
+}
+
+/**
+ * Dashboard verisini yeniden hesaplar (manuel yenile butonu).
+ */
+function dashboardYenile() {
+  var btn = document.querySelector(".y-yenile-btn");
+  if (btn) {
+    btn.innerText = "⏳ HESAPLANIYOR...";
+    btn.disabled = true;
+  }
+  
+  if (typeof google === 'undefined' || !google.script) {
+    if (btn) {
+      btn.innerText = "🔄 Verileri Yenile";
+      btn.disabled = false;
+    }
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (btn) {
+        btn.innerText = "🔄 Verileri Yenile";
+        btn.disabled = false;
+      }
+      if (sonuc && sonuc.basarili) {
+        // Yeniden çek ve göster (Raporlama)
+        raporlamaVeriCek();
+      } else {
+        gUyari("HATA", sonuc.hata || "Veriler yenilenemedi");
+      }
+    })
+    .withFailureHandler(function(err) {
+      if (btn) {
+        btn.innerText = "🔄 Verileri Yenile";
+        btn.disabled = false;
+      }
+      gUyari("HATA", "Sistem hatası");
+    })
+    .dashboardVerisiHazirla();
+}
+
+/**
+ * Detaylı rapor sayfasına git — 7 modül için generic detay sayfası açar
+ */
+function raporAc(modulAdi) {
+  
+  _detayAktifModul = modulAdi;
+  _detayFiltre = "tumu";
+  _detayArama = "";
+  _detaySayfa = 1;
+  
+  var ikonlar = {
+    "Zimmet İşlemleri": "📋",
+    "Geçici Kullanım": "🔄",
+    "Kaza/Hasar": "🚨",
+    "Servis Kayıt": "🔧",
+    "Envanter": "📦",
+    "Periyodik Kontrol": "🔍",
+    "Km Bilgisi": "⏲️",
+    "KM Bilgisi": "⏲️"
+  };
+  
+  if (modulAdi === "KM Bilgisi") {
+    _detayAktifModul = "Km Bilgisi";
+  }
+  
+  setText("detay-baslik", modulAdi);
+  var ikonEl = document.getElementById("detay-ikon");
+  if (ikonEl) ikonEl.innerText = ikonlar[modulAdi] || "📋";
+  
+  var btnlar = document.querySelectorAll(".detay-filtre-btn");
+  btnlar.forEach(function(b) {
+    b.classList.toggle("aktif", b.getAttribute("data-filtre") === "tumu");
+  });
+  
+  var aramaEl = document.getElementById("detay-arama");
+  if (aramaEl) aramaEl.value = "";
+  
+  ekranDegistir("ekran-rapor-detay");
+  detayYukle();
+}
+
+// =====================================================================
+// AŞAMA 1.7 — DETAY RAPOR SAYFASI
+// =====================================================================
+
+var _detayAktifModul = "";
+var _detayFiltre = "tumu";
+var _detayArama = "";
+var _detaySayfa = 1;
+var _detayAramaTimer = null;
+
+function detayFiltreDegistir(btnEl, filtre) {
+  var btnlar = document.querySelectorAll(".detay-filtre-btn");
+  btnlar.forEach(function(b) { b.classList.remove("aktif"); });
+  if (btnEl) btnEl.classList.add("aktif");
+  
+  _detayFiltre = filtre;
+  _detaySayfa = 1;
+  detayYukle();
+}
+
+/**
+ * AŞAMA 1.7 YENİ — İstatistik kartına tıklama.
+ * Aktif kartı değiştirir ve filtreyi uygular.
+ */
+function detayKartTikla(kartEl, filtre) {
+  // Tüm kartlardan "aktif" sınıfını kaldır
+  var kartlar = document.querySelectorAll(".detay-istat-kart");
+  kartlar.forEach(function(k) { k.classList.remove("aktif"); });
+  
+  // Tıklanan karta aktif sınıfını ekle
+  if (kartEl) kartEl.classList.add("aktif");
+  
+  _detayFiltre = filtre;
+  _detaySayfa = 1;
+  detayYukle();
+}
+
+/**
+ * İstatistik kartlarının değerini günceller.
+ */
+function istatistikleriRender(istat) {
+  if (!istat) return;
+
+  setText("istat-toplam", istat.toplam || 0);
+  setText("istat-buay", istat.buAy || 0);
+  setText("istat-bekleyen", istat.bekleyen || 0);
+  setText("istat-onayli", istat.onayli || 0);
+  setText("istat-reddedildi", istat.reddedildi || 0);
+}
+
+function detayFiltreDegistirESKI(btnEl, filtre) {
+  var btnlar = document.querySelectorAll(".detay-filtre-btn");
+  btnlar.forEach(function(b) { b.classList.remove("aktif"); });
+  if (btnEl) btnEl.classList.add("aktif");
+  
+  _detayFiltre = filtre;
+  _detaySayfa = 1;
+  detayYukle();
+}
+
+function detayAramaYap() {
+  var input = document.getElementById("detay-arama");
+  if (!input) return;
+  
+  _detayArama = input.value.trim();
+  _detaySayfa = 1;
+  
+  if (_detayAramaTimer) clearTimeout(_detayAramaTimer);
+  _detayAramaTimer = setTimeout(function() {
+    detayYukle();
+  }, 400);
+}
+
+function detaySayfaDegistir(yon) {
+  _detaySayfa = Math.max(1, _detaySayfa + yon);
+  detayYukle();
+}
+
+function detayYukle() {
+  var liste_el = document.getElementById("detay-liste");
+  if (!liste_el) return;
+  
+  liste_el.innerHTML = '<div class="detay-yukleniyor">⏳ Yükleniyor...</div>';
+  
+  if (typeof google === 'undefined' || !google.script) {
+    liste_el.innerHTML = '<div class="detay-bos">Test ortamında veri çekilemiyor.</div>';
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (!sonuc || !sonuc.basarili) {
+        liste_el.innerHTML = '<div class="detay-bos">⚠️ Liste yüklenemedi: ' + (sonuc.mesaj || "bilinmeyen hata") + '</div>';
+        return;
+      }
+      detayRender(sonuc);
+    })
+    .withFailureHandler(function(err) {
+      liste_el.innerHTML = '<div class="detay-bos">⚠️ Sunucu hatası: ' + err.message + '</div>';
+    })
+    .detayRaporGetir({
+      modul: _detayAktifModul,
+      filtre: _detayFiltre,
+      arama: _detayArama,
+      sayfa: _detaySayfa,
+      sayfaBoyutu: 20
+    });
+}
+
+function detayRender(sonuc) {
+  var liste_el = document.getElementById("detay-liste");
+  var sayac_el = document.getElementById("detay-sayac");
+  var sayfalama_el = document.getElementById("detay-sayfalama");
+  var bilgi_el = document.getElementById("detay-sayfa-bilgi");
+  var oncekiBtn = document.getElementById("detay-onceki");
+  var sonrakiBtn = document.getElementById("detay-sonraki");
+  
+  if (!liste_el) return;
+  
+  // AŞAMA 1.7 YENİ — İstatistik kartlarını güncelle
+  if (sonuc.istatistik) {
+    istatistikleriRender(sonuc.istatistik);
+  }
+  
+  if (sayac_el) sayac_el.innerText = (sonuc.toplamKayit || 0) + " kayıt";
+  
+  if (!sonuc.liste || sonuc.liste.length === 0) {
+    var bosMesaj = "Henüz kayıt yok";
+    if (_detayArama) bosMesaj = "🔍 '" + escapeHtml(_detayArama) + "' için sonuç bulunamadı";
+    else if (_detayFiltre === "onayli") bosMesaj = "✅ Onaylı kayıt yok";
+    else if (_detayFiltre === "bekleyen") bosMesaj = "⏳ Bekleyen kayıt yok";
+    else if (_detayFiltre === "reddedildi") bosMesaj = "❌ Reddedilen kayıt yok";
+    
+    liste_el.innerHTML = '<div class="detay-bos">' + bosMesaj + '</div>';
+    if (sayfalama_el) sayfalama_el.style.display = "none";
+    return;
+  }
+  
+  var htmlParcalari = sonuc.liste.map(function(item, idx) {
+    var onayClass = "bekleyen";
+    var onayMetin = "⏳ BEKLEYEN";
+    if (item.onayDurumu === "Onaylandı") { onayClass = "onayli"; onayMetin = "✅ ONAY"; }
+    else if (item.onayDurumu === "Reddedildi") { onayClass = "reddedildi"; onayMetin = "❌ RED"; }
+    
+    var detayHtml = "";
+    if (item.detaylar && item.detaylar.length > 0) {
+      detayHtml = item.detaylar.map(function(d) {
+        return '<div class="detay-satir">' +
+                 '<span class="detay-satir-label">' + escapeHtml(d.label) + ':</span>' +
+                 '<span class="detay-satir-deger">' + escapeHtml(d.deger) + '</span>' +
+               '</div>';
+      }).join('');
+    } else {
+      detayHtml = '<div class="detay-satir"><span class="detay-satir-deger" style="color:#64748b;font-style:italic;">Ek detay yok</span></div>';
+    }
+    
+    var kartId = "detayKart-" + idx;
+    
+    return '<div class="detay-kart" id="' + kartId + '">' +
+      '<div class="detay-kart-ust" onclick="detayKartAcKapat(\'' + kartId + '\')">' +
+        '<span class="detay-kart-plaka">' + escapeHtml(item.plaka) + '</span>' +
+        '<div class="detay-kart-orta">' +
+          '<div class="detay-kart-kullanici">👤 ' + escapeHtml(item.kullanici || "—") + '</div>' +
+          '<div class="detay-kart-tarih">' + escapeHtml(item.tarih + " " + item.saat) + '</div>' +
+        '</div>' +
+        '<span class="detay-kart-onay ' + onayClass + '">' + onayMetin + '</span>' +
+        '<span class="detay-kart-ok">▼</span>' +
+      '</div>' +
+      '<div class="detay-kart-icerik">' +
+        detayHtml +
+      '</div>' +
+    '</div>';
+  });
+  
+  liste_el.innerHTML = htmlParcalari.join('');
+  
+  if (sonuc.toplamSayfa > 1) {
+    if (sayfalama_el) sayfalama_el.style.display = "flex";
+    if (bilgi_el) bilgi_el.innerText = sonuc.mevcutSayfa + " / " + sonuc.toplamSayfa;
+    if (oncekiBtn) oncekiBtn.disabled = (sonuc.mevcutSayfa <= 1);
+    if (sonrakiBtn) sonrakiBtn.disabled = (sonuc.mevcutSayfa >= sonuc.toplamSayfa);
+  } else {
+    if (sayfalama_el) sayfalama_el.style.display = "none";
+  }
+}
+
+function detayKartAcKapat(kartId) {
+  var kart = document.getElementById(kartId);
+  if (!kart) return;
+  kart.classList.toggle("acik");
+}
+
+// =====================================================================
+// AŞAMA 1.7 PARÇA 2 — SİCİL KARTI (Generic: Araç + Personel)
+// =====================================================================
+
+var _sicilTip = "arac"; // "arac" | "personel"
+var _sicilListe = [];
+var _sicilGenisBolumler = {}; // bölümlerin durumu: null=kapalı, "az"=son 4, "tum"=tümü
+var _sicilSonVeri = null; // Son çekilen veri (re-render için cache)
+var _sicilPersonelCache = null; // Personel listesi cache
+
+/**
+ * Sicil Kartı ekranını açar. tip: "arac" | "personel"
+ */
+function sicilKartiAc(tip) {
+  _sicilTip = tip;
+  _sicilGenisBolumler = {};
+  
+  // Başlık + ikon ayarla
+  var baslik = document.getElementById("sicil-baslik-yazi");
+  var ikon = document.getElementById("sicil-baslik-ikon");
+  var kart = document.getElementById("sicil-baslik-kart");
+  var arama = document.getElementById("sicil-arama");
+  
+  if (tip === "arac") {
+    if (baslik) baslik.innerText = "ARAÇ SİCİL KARTI";
+    if (ikon) {
+      ikon.innerText = "🚐";
+      ikon.style.background = "linear-gradient(135deg,#14b8a6,#0f766e)";
+    }
+    if (arama) arama.placeholder = "Plaka yazın veya seçin...";
+    // Plaka listesi
+    _sicilListe = (ayarlarCache && ayarlarCache["Araç Plakası"]) ? ayarlarCache["Araç Plakası"] : [];
+  } else {
+    if (baslik) baslik.innerText = "PERSONEL SİCİL KARTI";
+    if (ikon) {
+      ikon.innerText = "👤";
+      ikon.style.background = "linear-gradient(135deg,#a855f7,#7c3aed)";
+    }
+    if (arama) arama.placeholder = "Personel adı yazın...";
+    
+    // Personel listesi — cache veya backend'den çek
+    if (_sicilPersonelCache) {
+      _sicilListe = _sicilPersonelCache;
+    } else {
+      _sicilListe = [];
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run
+          .withSuccessHandler(function(liste) {
+            _sicilPersonelCache = liste || [];
+            _sicilListe = _sicilPersonelCache;
+          })
+          .withFailureHandler(function(err) {
+            console.error("Personel listesi alınamadı:", err);
+          })
+          .personelListesiGetir();
+      }
+    }
+  }
+  
+  // Temizle
+  if (arama) arama.value = "";
+  var kunyeAlan = document.getElementById("sicil-kunye-alan");
+  if (kunyeAlan) kunyeAlan.innerHTML = "";
+  var bolumler = document.getElementById("sicil-bolumler");
+  if (bolumler) bolumler.innerHTML = '<div class="detay-bos">Yukarıdan seçim yapın</div>';
+  
+  var liste = document.getElementById("sicil-liste");
+  if (liste) liste.style.display = "none";
+  
+  ekranDegistir("ekran-sicil-karti");
+}
+
+function sicilListeAc() {
+  sicilAra();
+}
+
+function sicilAra() {
+  var input = document.getElementById("sicil-arama");
+  var liste = document.getElementById("sicil-liste");
+  if (!input || !liste) return;
+  
+  var arama = input.value.trim().toUpperCase().replace(/\s+/g, "");
+  
+  var sonuc;
+  if (arama === "") {
+    sonuc = _sicilListe.slice();
+  } else {
+    sonuc = _sicilListe.filter(function(p) {
+      var pTemiz = p.toString().toUpperCase().replace(/\s+/g, "");
+      return pTemiz.indexOf(arama) !== -1;
+    });
+  }
+  
+  if (sonuc.length === 0) {
+    liste.innerHTML = '<div class="arac-plaka-item" style="color:#64748b;">Sonuç bulunamadı. Yine de aramak için Enter\'a basın.</div>';
+  } else {
+    liste.innerHTML = sonuc.slice(0, 20).map(function(p) {
+      return '<div class="arac-plaka-item" onclick="sicilSec(\'' + p.replace(/'/g, "\\'") + '\')">' + escapeHtml(p) + '</div>';
+    }).join('');
+  }
+  
+  liste.style.display = "block";
+}
+
+function sicilSec(deger) {
+  var input = document.getElementById("sicil-arama");
+  if (input) input.value = deger;
+  
+  var liste = document.getElementById("sicil-liste");
+  if (liste) liste.style.display = "none";
+  
+  var bolumler = document.getElementById("sicil-bolumler");
+  if (bolumler) bolumler.innerHTML = '<div class="detay-yukleniyor">⏳ Sicil bilgileri yükleniyor...</div>';
+  
+  var kunyeAlan = document.getElementById("sicil-kunye-alan");
+  if (kunyeAlan) kunyeAlan.innerHTML = "";
+  
+  // Yeni seçim → bölüm durumlarını sıfırla, cache temizle
+  _sicilGenisBolumler = {};
+  _sicilSonVeri = null;
+  
+  if (typeof google === 'undefined' || !google.script) {
+    if (bolumler) bolumler.innerHTML = '<div class="detay-bos">Test ortamında veri çekilemiyor.</div>';
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      if (!sonuc || !sonuc.basarili) {
+        if (bolumler) bolumler.innerHTML = '<div class="detay-bos">⚠️ Veri yüklenemedi: ' + (sonuc.mesaj || "hata") + '</div>';
+        return;
+      }
+      _sicilSonVeri = sonuc; // CACHE: re-render için sakla
+      sicilKartiRender(sonuc);
+    })
+    .withFailureHandler(function(err) {
+      if (bolumler) bolumler.innerHTML = '<div class="detay-bos">⚠️ Sunucu hatası: ' + err.message + '</div>';
+    })
+    .sicilKartiGetir(_sicilTip, deger);
+}
+
+/**
+ * AŞAMA C2 — AKILLI ÖZET KARTI
+ * Belge durumları, trafik, servis, envanter, km özetini render eder.
+ */
+function akilliOzetRender(ozet) {
+  if (!ozet) return "";
+  
+  var bolumler = [];
+  
+  // 1) BELGE DURUMLARI
+  if (ozet.belgeler && ozet.belgeler.length > 0) {
+    var belgeSatirlari = ozet.belgeler.map(function(b) {
+      return belgeSatiri(b);
+    }).join('');
+    bolumler.push(
+      '<div class="ozet-grup">' +
+        '<div class="ozet-grup-baslik">📁 BELGE DURUMLARI</div>' +
+        belgeSatirlari +
+      '</div>'
+    );
+  }
+  
+  // 2) TRAFİK CEZALARI
+  if (ozet.trafik && ozet.trafik.toplamCeza > 0) {
+    var trafikSatirlari = '';
+    trafikSatirlari += ozetSatiri("💰", "Toplam", ozet.trafik.toplamTutar.toLocaleString("tr-TR") + " TL (" + ozet.trafik.toplamCeza + " ceza)", "info");
+    if (ozet.trafik.odenmemisTutar > 0) {
+      trafikSatirlari += ozetSatiri("⚠️", "Ödenmemiş", ozet.trafik.odenmemisTutar.toLocaleString("tr-TR") + " TL", "gecti");
+    }
+    if (ozet.trafik.plakalar && ozet.trafik.plakalar.length > 0) {
+      trafikSatirlari += ozetSatiri("🚐", "Plakalar", ozet.trafik.plakalar.join(", "), "info");
+    }
+    bolumler.push(
+      '<div class="ozet-grup">' +
+        '<div class="ozet-grup-baslik">🚓 TRAFİK CEZALARI</div>' +
+        trafikSatirlari +
+      '</div>'
+    );
+  }
+  
+  // 3) SERVİS PERFORMANSI
+  if (ozet.servis && ozet.servis.toplam > 0) {
+    var servisSatirlari = '';
+    servisSatirlari += ozetSatiri("🔧", "Toplam", ozet.servis.toplam + " servis", "info");
+    if (ozet.servis.enSikNeden) {
+      servisSatirlari += ozetSatiri("📊", "En sık", ozet.servis.enSikNeden + " (" + ozet.servis.enSikSayi + " kez)", "info");
+    }
+    bolumler.push(
+      '<div class="ozet-grup">' +
+        '<div class="ozet-grup-baslik">🔧 SERVİS</div>' +
+        servisSatirlari +
+      '</div>'
+    );
+  }
+  
+  // 4) ENVANTER AKTİF EKSİK
+  if (ozet.envanter && ozet.envanter.aktifEksik && ozet.envanter.aktifEksik.length > 0) {
+    var envanterSatir = ozetSatiri("📦", "Aktif Eksik", ozet.envanter.aktifEksik.join(", "), "yakin");
+    bolumler.push(
+      '<div class="ozet-grup">' +
+        '<div class="ozet-grup-baslik">📦 ENVANTER</div>' +
+        envanterSatir +
+      '</div>'
+    );
+  }
+  
+  // 5) KM (sadece araç)
+  if (ozet.km && ozet.km.guncelKm > 0) {
+    var kmSatir = ozetSatiri("⏲️", "Güncel KM", ozet.km.guncelKm.toLocaleString("tr-TR") + " km", "info");
+    if (ozet.km.sonGuncelleme) {
+      kmSatir += ozetSatiri("📅", "Son Güncelleme", ozet.km.sonGuncelleme, "info");
+    }
+    bolumler.push(
+      '<div class="ozet-grup">' +
+        '<div class="ozet-grup-baslik">⏲️ KM BİLGİSİ</div>' +
+        kmSatir +
+      '</div>'
+    );
+  }
+  
+  if (bolumler.length === 0) return "";
+  
+  return '<div class="akilli-ozet-kart">' +
+           '<div class="akilli-ozet-baslik">💡 AKILLI ÖZET</div>' +
+           bolumler.join('') +
+         '</div>';
+}
+
+/**
+ * Belge satırı render (tarih veya metin tipi)
+ */
+function belgeSatiri(b) {
+  var durumRengi = "gecerli";
+  var durumYazi = "GEÇERLİ";
+  
+  if (b.durum === "gecti")        { durumRengi = "gecti";   durumYazi = "GEÇTİ"; }
+  else if (b.durum === "yakin")   { durumRengi = "yakin";   durumYazi = (b.gunFark || 0) + " GÜN"; }
+  else if (b.durum === "yok")     { durumRengi = "yok";     durumYazi = "YOK"; }
+  
+  // Tarih satırı (sadece tarih tipi için, metin tipinde rozet yeterli)
+  var ekDeger = "";
+  if (b.tipi === "metin" && b.tarih) {
+    durumYazi = b.tarih.toLocaleUpperCase("tr-TR"); // SRC: TAM
+  } else if (b.tarih) {
+    ekDeger = '<span class="ozet-tarih">' + escapeHtml(b.tarih) + '</span>';
+  }
+  
+  return '<div class="ozet-satir">' +
+           '<span class="ozet-ikon">📁</span>' +
+           '<span class="ozet-etiket">' + escapeHtml(b.ad) + '</span>' +
+           '<span class="ozet-rozet ozet-rozet-' + durumRengi + '">' + escapeHtml(durumYazi) + '</span>' +
+           ekDeger +
+         '</div>';
+}
+
+/**
+ * Genel özet satırı render
+ */
+function ozetSatiri(ikon, etiket, deger, renk) {
+  return '<div class="ozet-satir">' +
+           '<span class="ozet-ikon">' + ikon + '</span>' +
+           '<span class="ozet-etiket">' + escapeHtml(etiket) + '</span>' +
+           '<span class="ozet-rozet ozet-rozet-' + (renk || 'info') + '">' + escapeHtml(deger) + '</span>' +
+         '</div>';
+}
+
+
+function sicilKartiRender(sonuc) {
+  // Künye (sadece araç için)
+  var kunyeAlan = document.getElementById("sicil-kunye-alan");
+  if (kunyeAlan && sonuc.kunye) {
+    kunyeAlan.innerHTML = aracKunyeHtml(sonuc.kunye, false);
+  } else if (kunyeAlan) {
+    kunyeAlan.innerHTML = "";
+  }
+  
+  var bolumlerAlan = document.getElementById("sicil-bolumler");
+  if (!bolumlerAlan) return;
+  
+  if (!sonuc.bolumler || sonuc.bolumler.length === 0) {
+    bolumlerAlan.innerHTML = '<div class="detay-bos">Kayıt bulunamadı</div>';
+    return;
+  }
+  
+  // === AŞAMA C2: AKILLI ÖZET KARTI ===
+  var ozetHtml = akilliOzetRender(sonuc.ozet);
+  
+  var html = sonuc.bolumler.map(function(b, bIdx) {
+    var statikClass = (b.type === "statik") ? " statik" : "";
+    
+    // 2 durum: kapalı (varsayılan) → sadece başlık | açık → son 4 + tümü
+    var durum = _sicilGenisBolumler[bIdx]; // undefined=kapalı, "az"=son 4, "tum"=tümü
+    
+    var icerikHtml = "";
+    var okIcon = "▼";
+    
+    if (durum === "az" || durum === "tum") {
+      okIcon = "▲";
+      
+      if (!b.kayitlar || b.kayitlar.length === 0) {
+        icerikHtml = '<div class="arac-bolum-icerik"><div class="arac-bolum-bos">Bu bölümde kayıt yok</div></div>';
+      } else {
+        var gosterilenler = (durum === "tum") ? b.kayitlar : b.kayitlar.slice(0, 4);
+        
+        var kayitHtml = gosterilenler.map(function(k) {
+          var detayMetni = "";
+          if (k.detaylar && k.detaylar.length > 0) {
+            detayMetni = k.detaylar.map(function(d) {
+              return escapeHtml(d.label) + ": " + escapeHtml(d.deger);
+            }).join(" · ");
+          }
+          return '<div class="arac-bolum-kayit">' +
+                   (k.tarih ? '<div class="arac-bolum-tarih">📅 ' + escapeHtml(k.tarih + " " + k.saat) + '</div>' : '') +
+                   (detayMetni ? '<div class="arac-bolum-detay">' + detayMetni + '</div>' : '') +
+                 '</div>';
+        }).join('');
+        
+        // Tümünü göster / daha az göster butonu
+        var toggleBtn = "";
+        if (b.kayitlar.length > 4) {
+          if (durum === "az") {
+            toggleBtn = '<button class="arac-bolum-toggle" onclick="event.stopPropagation(); sicilBolumGenislet(' + bIdx + ')">▼ Tümünü göster (' + b.kayitlar.length + ')</button>';
+          } else {
+            toggleBtn = '<button class="arac-bolum-toggle" onclick="event.stopPropagation(); sicilBolumDaralt(' + bIdx + ')">▲ Daha az göster</button>';
+          }
+        }
+        
+        // Trafik Cezaları için ödenmemiş özeti
+        var ekOzet = "";
+        if (b.modul === "Trafik Cezaları" && sonuc.ozet && sonuc.ozet.odenmemisCeza > 0) {
+          ekOzet = '<div class="arac-bolum-ozet">💸 ÖDENMEMİŞ: <strong>' + sonuc.ozet.odenmemisCeza.toLocaleString("tr-TR") + ' TL</strong></div>';
+        }
+        
+        icerikHtml = '<div class="arac-bolum-icerik">' + kayitHtml + ekOzet + toggleBtn + '</div>';
+      }
+    }
+    
+    return '<div class="arac-bolum' + statikClass + '">' +
+             '<div class="arac-bolum-baslik" onclick="sicilBolumToggle(' + bIdx + ')" style="cursor:pointer;">' +
+               '<span>' + b.ikon + '</span>' +
+               '<span>' + escapeHtml(b.modul) + '</span>' +
+               '<span class="arac-bolum-toplam">' + b.toplam + ' kayıt</span>' +
+               '<span class="arac-bolum-ok">' + okIcon + '</span>' +
+             '</div>' +
+             icerikHtml +
+           '</div>';
+  }).join('');
+  
+  bolumlerAlan.innerHTML = ozetHtml + html;
+}
+
+/**
+ * Bölüm başlığına tıklandı → aç/kapat
+ */
+function sicilBolumToggle(bIdx) {
+  // Açıksa kapat, kapalıysa "az" durumda aç
+  if (_sicilGenisBolumler[bIdx]) {
+    _sicilGenisBolumler[bIdx] = null;
+  } else {
+    _sicilGenisBolumler[bIdx] = "az";
+  }
+  sicilYenidenRender();
+}
+
+/**
+ * Tümünü göster
+ */
+function sicilBolumGenislet(bIdx) {
+  _sicilGenisBolumler[bIdx] = "tum";
+  sicilYenidenRender();
+}
+
+/**
+ * Daha az göster (son 4'e dön)
+ */
+function sicilBolumDaralt(bIdx) {
+  _sicilGenisBolumler[bIdx] = "az";
+  sicilYenidenRender();
+}
+
+/**
+ * Aktif sicil kartını yeniden render eder (CACHE'den, backend'e gitmez).
+ */
+function sicilYenidenRender() {
+  if (_sicilSonVeri) {
+    sicilKartiRender(_sicilSonVeri);
+  }
+}
+
+// === ZİMMET ===
+function sekmeZimmet(s) {
+  ['A','B'].forEach(function(x) {
+    document.getElementById("btn-z" + x).classList.toggle('active', x === s);
+    document.getElementById("frm-z" + x).classList.toggle('active', x === s);
+  });
+}
+
+function zimmetKontrol() {
+  if (document.getElementById("z-Durum").value == "Hasar") {
+    gUyari("UYARI", "Zimmet Kontrolü İçin Araç Birimi İle Görüşün.");
+  }
+}
+
+function kaydetZimmetA() {
+  var d = document.getElementById("z-Durum").value;
+  if (!d) return gUyari("EKSİK", "Lütfen durum seçiniz.");
+  if (d == "Hasar") return gUyari("DİKKAT", "İşlem raporlanamaz. Zimmet belgesini düzeltiniz.");
+  raporla("ZİMMET İŞLEMLERİ", {
+    "Zimmet İşlem Türü": "Zimmet Alma",
+    "Zimmet Uygunluk Durumu": d
+  }, [], null, null);
+}
+
+function kaydetZimmetB() {
+  raporla("ZİMMET İŞLEMLERİ", {
+    "Zimmet İşlem Türü": "Zimmet Devri",
+    "Zimmet Uygunluk Durumu": "Tam"
+  }, [], null, null);
+}
+
+// === GEÇİCİ ===
+function sekmeGecici(s) {
+  document.getElementById("btn-gA").classList.toggle('active', s == 'A');
+  document.getElementById("btn-gB").classList.toggle('active', s == 'B');
+  document.getElementById("lbl-gKim").innerText = (s == 'A' ? "👤 Aracı Kimden Alıyorsunuz?" : "👤 Aracı Kime Veriyorsunuz?");
+}
+
+function geciciDurum() {
+  var d = document.getElementById("g-Durum").value;
+  document.getElementById("g-Kutu-Hasar").style.display = (d == "Hasar" ? 'block' : 'none');
+  document.getElementById("g-Kutu-Eksik").style.display = (d == "Eksik" ? 'block' : 'none');
+  document.getElementById("g-Kutu-Taahhut").style.display = (d == "Hasar" || d == "Eksik" ? 'block' : 'none');
+}
+
+function kaydetGecici() {
+  var k = document.getElementById("g-Kim").value;
+  if (k.length < 3) return gUyari("HATA", "ARACI ALDIĞINIZ/VERDİĞİNİZ KİŞİYİ YAZMAK ZORUNLUDUR!");
+  
+  var d = document.getElementById("g-Durum").value;
+  var c = [];
+  document.querySelectorAll(".gC:checked").forEach(function(x) { c.push(x.value); });
+  
+  if (d == "Hasar" && !document.getElementById("gF1").files.length && !document.getElementById("gF2").files.length) {
+    return gUyari("HATA", "Yeni hasar durumunda fotoğraf yüklemek zorunludur!");
+  }
+  if (d == "Eksik" && !c.length) {
+    return gUyari("HATA", "Lütfen eksik envanterleri seçiniz!");
+  }
+  if ((d == "Hasar" || d == "Eksik") && !document.getElementById("g-Taahhut-Onay").checked) {
+    return gUyari("HATA", "Lütfen Taahhütnameyi onaylayınız!");
+  }
+  
+  var sekme = document.getElementById("btn-gA").classList.contains('active') ? "Geçici Alma" : "Geri Alma";
+  
+  // Beyan metnini anlamlı hale getir
+  var beyanMetni = "Yeni Hasar/Eksik Yok";
+  if (d == "Hasar") beyanMetni = "Yeni Hasar Var";
+  else if (d == "Eksik") beyanMetni = "Yeni Eksik Var";
+  
+  raporla("GEÇİCİ KULLANIM", {
+    "İşlem Yönü": sekme,
+    "Geçici / Aracı Kimden Aldı?": k,
+    "Yeni Hasar veya Eksik Beyanı": beyanMetni,
+    "Temizlik Durumu": document.getElementById("g-Temiz").value,
+    "Eksik Envanter Kalemleri": c.join(", ")
+  }, ["gF1", "gF2"], "g-progress", "btn-gecici-gonder");
+}
+
+// === KAZA ===
+function kazaDurum() {
+  var o = document.getElementById("k-Olay").value;
+  var t = document.getElementById("k-Tutanak").value;
+  document.getElementById("k-Kutu-Foto").style.display = (o ? 'block' : 'none');
+  document.getElementById("k-Kutu-Polis").style.display = (o == 'Ciddi' ? 'block' : 'none');
+  document.getElementById("k-Kutu-Hafif").style.display = (o == 'Hafif' ? 'block' : 'none');
+  document.getElementById("k-Kutu-TutEvet").style.display = (t == 'Evet' ? 'block' : 'none');
+  document.getElementById("k-Kutu-TutHayir").style.display = (t == 'Hayir' ? 'block' : 'none');
+}
+
+function kaydetKaza() {
+  var z = document.getElementById("k-Zaman").value;
+  var o = document.getElementById("k-Olay").value;
+  var t = document.getElementById("k-Tutanak").value;
+  
+  if (!z || !o || !t) return gUyari("EKSİK", "Zaman, Olay Türü ve Tutanak zorunludur.");
+  if (!document.getElementById("kF1").files.length && !document.getElementById("kF2").files.length) {
+    return gUyari("HATA", "Hasar fotoğrafı yüklemek zorunludur!");
+  }
+  if (t == 'Evet' && !document.getElementById("kTF1").files.length && !document.getElementById("kTF2").files.length) {
+    return gUyari("HATA", "Tutanak fotoğrafı yüklemek zorunludur!");
+  }
+  if (t == 'Hayir' && !document.getElementById("k-Taahhut-Onay").checked) {
+    return gUyari("HATA", "Taahhüt kutucuğunu işaretlemek zorunludur!");
+  }
+  
+  raporla("KAZA / HASAR BİLDİRİMİ", {
+    "Kaza Tarihi ve Saati": z,
+    "Kaza Zimmet Durumu": document.getElementById("k-Zim").value,
+    "Olay Türü": o,
+    "Tutanak Durumu": t,
+    "Tutanak Tutulmama Nedeni": document.getElementById("k-Neden").value
+  }, ["kF1", "kF2", "kTF1", "kTF2"], "k-progress", "btn-kaza-gonder");
+}
+
+// === SERVİS ===
+function sekmeServis(s) {
+  ['A','B'].forEach(function(x) {
+    document.getElementById("btn-s" + x).classList.toggle('active', x === s);
+    document.getElementById("frm-s" + x).classList.toggle('active', x === s);
+  });
+}
+
+function servisOnaDur() {
+  var ac = false;
+  document.querySelectorAll(".sC:checked").forEach(function(c) {
+    if (c.value == "Kaporta" || c.value == "Boya" || c.value == "Cam") ac = true;
+  });
+  document.getElementById("s-Kutu-OnaFoto").style.display = (ac ? 'block' : 'none');
+}
+
+function kaydetServisA() {
+  if (document.getElementById("s-Evr1").value == 'Tam' && !document.getElementById("sF1").files.length && !document.getElementById("sF2").files.length) {
+    return gUyari("HATA", "Arıza ve Bakım Formu fotoğrafı zorunludur!");
+  }
+  
+  raporla("SERVİS İŞLEMLERİ", {
+    "İşlem Yönü": "Servise Bırakma",
+    "Servise Kim Götürüyor": document.getElementById("s-Kim").value,
+    "Servise Gidiş Nedeni": document.getElementById("s-Neden").value,
+    "Gidiş Şekli": document.getElementById("s-Acil").value,
+    "Servis Adı": document.getElementById("s-Yer").value,
+    "Evrak Durumu": "Form:" + document.getElementById("s-Evr1").value + "|Ruhsat:" + document.getElementById("s-Evr2").value
+  }, ["sF1", "sF2"], "s-progress", "btn-servisA-gonder");
+}
+
+function kaydetServisB() {
+  var km = document.getElementById("s-Km").value;
+  if (!km) return gUyari("HATA", "Güncel KM girmek zorunludur!");
+  
+  var c = [];
+  document.querySelectorAll(".sC:checked").forEach(function(x) { c.push(x.value); });
+  
+  if (document.getElementById("s-Kutu-OnaFoto").style.display == 'block' && !document.getElementById("sOF1").files.length && !document.getElementById("sOF2").files.length) {
+    return gUyari("HATA", "Cam, Kaporta/Boya onarımı için fotoğraf zorunludur!");
+  }
+  
+  raporla("SERVİS İŞLEMLERİ", {
+    "İşlem Yönü": "Servisten Alma",
+    "Güncel KM": km,
+    "Yapılan Onarımlar": c.join(", ")
+  }, ["sOF1", "sOF2"], "sb-progress", "btn-servisB-gonder");
+}
+
+// === ENVANTER ===
+function sekmeEnvanter(s) {
+  ['A','B'].forEach(function(x) {
+    document.getElementById("btn-e" + x).classList.toggle('active', x === s);
+    document.getElementById("frm-e" + x).classList.toggle('active', x === s);
+  });
+}
+
+function envanterTutanak() {
+  var t = document.getElementById("e-Tutanak").value;
+  document.getElementById("e-Kutu-TutFoto").style.display = (t == 'Evet' ? 'block' : 'none');
+  document.getElementById("e-Kutu-Taahhut").style.display = (t == 'Hayir' ? 'block' : 'none');
+}
+
+function kaydetEnvanterA() {
+  var c = [];
+  document.querySelectorAll(".eC:checked").forEach(function(x) { c.push(x.value); });
+  if (!c.length) return gUyari("HATA", "Lütfen eksik envanteri seçiniz.");
+  
+  var t = document.getElementById("e-Tutanak").value;
+  if (!t) return gUyari("HATA", "Tutanak durumunu seçiniz.");
+  
+  if (t == 'Evet' && !document.getElementById("eF1").files.length && !document.getElementById("eF2").files.length) {
+    return gUyari("HATA", "Tutanak fotoğrafı yükleyiniz!");
+  }
+  if (t == 'Hayir' && !document.getElementById("e-Taahhut-Onay").checked) {
+    return gUyari("HATA", "Taahhüt kutucuğunu işaretlemek zorunludur!");
+  }
+  
+  raporla("ENVANTER BİLDİRİMİ", {
+    "İşlem Yönü": "Eksik Bildirimi",
+    "Eksik Envanter Kalemleri": c.join(", "),
+    "Tutanak Durumu": t
+  }, ["eF1", "eF2"], "e-progress", "btn-envA-gonder");
+}
+
+function kaydetEnvanterB() {
+  var c = [];
+  document.querySelectorAll(".eTemin:checked").forEach(function(x) { c.push(x.value); });
+  if (!c.length) return gUyari("HATA", "Lütfen temin edilen envanteri seçiniz.");
+  
+  raporla("ENVANTER BİLDİRİMİ", {
+    "İşlem Yönü": "Temin Bildirimi",
+    "Eksik Envanter Kalemleri": c.join(", ")
+  }, [], null, null);
+}
+
+// === PERİYODİK ===
+function kaydetPeriyodik() {
+  // === ZORUNLU ALAN KONTROLLERİ ===
+  
+  // Giydirme bölümü
+  var giydirmeDurum = document.getElementById("p-Giydirme").value;
+  if (!giydirmeDurum) {
+    return gUyari("KURAL İHLALİ", "Giydirme Genel Durumu seçilmelidir.");
+  }
+  var giydirmeYipranma = document.getElementById("p-GiydirmeYipranma").value;
+  if (!giydirmeYipranma) {
+    return gUyari("KURAL İHLALİ", "Giydirmede son 1 ay yıpranma sorusu cevaplanmalıdır.");
+  }
+  
+  // Giydirme fotoları zorunlu (her durum için)
+  var f1 = document.getElementById("pF1");
+  var f2 = document.getElementById("pF2");
+  if ((!f1.files || f1.files.length === 0) && (!f2.files || f2.files.length === 0)) {
+    return gUyari("KURAL İHLALİ", "Giydirme fotoğrafları (Sağ + Sol) zorunludur.");
+  }
+  
+  // Kaporta bölümü
+  var kaportaDurum = document.getElementById("p-Kaporta").value;
+  if (!kaportaDurum) {
+    return gUyari("KURAL İHLALİ", "Kaporta Genel Durumu seçilmelidir.");
+  }
+  var kaportaYipranma = document.getElementById("p-KaportaYipranma").value;
+  if (!kaportaYipranma) {
+    return gUyari("KURAL İHLALİ", "Kaportada son 1 ay yıpranma sorusu cevaplanmalıdır.");
+  }
+  
+  // Kaporta fotoları zorunlu
+  var pC1 = document.getElementById("pC1");
+  var pC2 = document.getElementById("pC2");
+  if ((!pC1.files || pC1.files.length === 0) && (!pC2.files || pC2.files.length === 0)) {
+    return gUyari("KURAL İHLALİ", "Ön ve Arka Cephe fotoğrafları zorunludur.");
+  }
+  var pY1 = document.getElementById("pY1");
+  var pY2 = document.getElementById("pY2");
+  if ((!pY1.files || pY1.files.length === 0) && (!pY2.files || pY2.files.length === 0)) {
+    return gUyari("KURAL İHLALİ", "Sağ ve Sol Yan fotoğrafları zorunludur.");
+  }
+  var pA1 = document.getElementById("pA1");
+  var pA2 = document.getElementById("pA2");
+  if ((!pA1.files || pA1.files.length === 0) && (!pA2.files || pA2.files.length === 0)) {
+    return gUyari("KURAL İHLALİ", "Aynalar fotoğrafları zorunludur.");
+  }
+  
+  // Video zorunlu
+  var pV1 = document.getElementById("pV1");
+  var pV2 = document.getElementById("pV2");
+  if ((!pV1.files || pV1.files.length === 0) && (!pV2.files || pV2.files.length === 0)) {
+    return gUyari("KURAL İHLALİ", "Araç videosu (20 sn) zorunludur.");
+  }
+  
+  // Mekanik bölümü - hepsi zorunlu
+  var lastik = document.getElementById("p-Lastik").value;
+  var cam = document.getElementById("p-Cam").value;
+  var lamba = document.getElementById("p-Lamba").value;
+  var klima = document.getElementById("p-Klima").value;
+  var aku = document.getElementById("p-Aku").value;
+  var mekanik = document.getElementById("p-Mekanik").value;
+  
+  if (!lastik || !cam || !lamba || !klima || !aku || !mekanik) {
+    return gUyari("KURAL İHLALİ", "Mekanik Kontrol bölümündeki tüm soruları cevaplamalısınız.");
+  }
+  
+  // === PAYLOAD ===
+  raporla("PERİYODİK KONTROL", {
+    "Giydirme Durumu": giydirmeDurum,
+    "Giydirme Son 1 Ay": giydirmeYipranma,
+    "Giydirme Notu": document.getElementById("p-GiydirmeNotu").value || "",
+    "Kaporta Durumu": kaportaDurum,
+    "Kaporta Son 1 Ay": kaportaYipranma,
+    "Kaporta Notu": document.getElementById("p-KaportaNotu").value || "",
+    "Lastik Durumu": lastik,
+    "Cam Durumu": cam,
+    "Lamba Durumu": lamba,
+    "Klima Durumu": klima,
+    "Akü Durumu": aku,
+    "Genel Mekanik": mekanik,
+    "Mekanik Notu": document.getElementById("p-MekanikNotu").value || ""
+  }, ["pF1", "pF2", "pC1", "pC2", "pY1", "pY2", "pA1", "pA2", "pV1", "pV2"], "p-progress", "btn-periyodik-gonder");
+}
+
+// === KM ===
+function kaydetKM() {
+  var km = document.getElementById("km-Bilgi").value;
+  if (!km) return gUyari("HATA", "KM bilgisi giriniz.");
+  
+  raporla("GÜNCEL KM BİLGİSİ", {
+    "Güncel KM": km
+  }, [], null, null);
+}
+</script>
