@@ -2751,79 +2751,26 @@ function servisOzetHesapla(servisBolum) {
   };
 }
 
-
 /**
  * Envanter aktif eksiklerini AKILLI hesaplar.
  * - Eksik Bildirimi → kalemler aktif sete eklenir
  * - Temin Bildirimi → kalemler aktif setten çıkarılır
  * - Sadece ONAYLANMIŞ kayıtlar işlenir
  * - Tarihe göre eskiden yeniye sıralanır
+ /**
+ * Envanter sayım özetini hesaplar (basit mod).
+ * AŞAMA F'de saha modülü düzeltilince akıllı eşleştirme yapılacak.
  */
 function envanterOzetHesapla(envanterBolum) {
   if (!envanterBolum || !envanterBolum.kayitlar || envanterBolum.kayitlar.length === 0) {
     return null;
   }
   
-  // Kayıtları tarihe göre eskiden yeniye sırala
-  const siraliKayitlar = envanterBolum.kayitlar.slice().sort(function(a, b) {
-    const ta = a.tarihHam ? new Date(a.tarihHam).getTime() : 0;
-    const tb = b.tarihHam ? new Date(b.tarihHam).getTime() : 0;
-    return ta - tb;
-  });
-  
-  // Aktif eksik seti (anahtar = büyük harf normalize, değer = orijinal yazım)
-  const aktifSet = {};
-  
-  siraliKayitlar.forEach(function(k) {
-    if (!k.detaylar) return;
-    
-    // Onay durumu kontrolü — sadece onaylanmış kayıtlar
-    if (k.onayDurumu && k.onayDurumu.toString().toUpperCase().indexOf("ONAY") === -1) {
-      return; // RED veya bekleyen kayıt — atla
-    }
-    
-    let islemTuru = "";
-    let kalemler = "";
-    
-    k.detaylar.forEach(function(d) {
-      if (d.label === "İşlem Türü" || d.label === "Islem Turu") {
-        islemTuru = (d.deger || "").toString();
-      }
-      if (d.label === "Eksik Olanlar" || d.label === "Eksik Kalemler" || d.label === "Kalemler") {
-        kalemler = (d.deger || "").toString();
-      }
-    });
-    
-    if (!kalemler) return;
-    
-    // Kalemleri parçala
-    const parcalar = kalemler.split(/[,;·]/)
-      .map(function(x) { return x.trim(); })
-      .filter(function(x) { return x; });
-    
-    const islemUst = islemTuru.toLocaleUpperCase("tr-TR");
-    
-    if (islemUst.indexOf("TEMİN") !== -1 || islemUst.indexOf("TEMIN") !== -1) {
-      // TEMIN → aktif setten çıkar
-      parcalar.forEach(function(p) {
-        const anahtar = p.toLocaleUpperCase("tr-TR");
-        delete aktifSet[anahtar];
-      });
-    } else {
-      // EKSİK BİLDİRİMİ (varsayılan) → aktif sete ekle
-      parcalar.forEach(function(p) {
-        const anahtar = p.toLocaleUpperCase("tr-TR");
-        aktifSet[anahtar] = p; // orijinal yazımı koru
-      });
-    }
-  });
-  
-  const aktifListe = Object.keys(aktifSet).map(function(k) { return aktifSet[k]; });
-  
-  if (aktifListe.length === 0) return { aktifEksik: [] };
+  const sonTarih = envanterBolum.kayitlar[0].tarih || "";
   
   return {
-    aktifEksik: aktifListe
+    toplamBildirim: envanterBolum.kayitlar.length,
+    sonBildirim: sonTarih
   };
 }
 
@@ -3214,12 +3161,21 @@ function detayKartiAlanlar(modul, headerMap, row) {
     ekle("Evrak Durumu", "Araç İçi Evrak Durumu");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Envanter") {
-    ekle("İşlem Türü", "5. Zimmet İşlem Türü");
-    ekle("Eksik Olanlar", "16. Eksik Envanter Kalemleri");
-    ekle("Tutanak", "21. Tutanak Tutuldu Mu?");
-    ekle("Onay Durumu", "31. Yönetici Onay Durumu");
-    ekle("Onaylayan", "32. Onaylayan Yönetici");
-    ekle("Red Gerekçesi", "33. Red Gerekçesi");
+    ekle("İlk Yardım", "İlk Yardım Çantası");
+    ekle("Reflektör", "Reflektör");
+    ekle("Kriko", "Kriko");
+    ekle("Bijon", "Bijon Anahtarı");
+    ekle("Ampul", "Yedek Ampul Seti");
+    ekle("Pense", "Pense & Tornavida");
+    ekle("El Feneri", "Seyyar Lamba / El Feneri");
+    ekle("Patinaj", "Patinaj Zinciri");
+    ekle("Çekme", "Çekme Halatı");
+    ekle("Stepne", "Stepne");
+    ekle("Kart Okuma", "Kart Okuma Cihazı");
+    ekle("Arka Sensör", "Arka Sensör");
+    ekle("Onay", "Yönetici Onayı");
+    ekle("Onay Durumu", "Yönetici Onay Durumu");
+    ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Periyodik Kontrol") {
     ekle("Giydirme", "Giydirme Durumu");
     ekle("Kaporta", "Kaporta Durumu");
@@ -4265,4 +4221,25 @@ function envanterSayfaTeshis2() {
       Logger.log(JSON.stringify(data[i]));
     }
   }
+}
+function headerMapTeshis() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Saha Bildirimleri");
+  const headerMap = getHeaderMap(sheet);
+  
+  // Test edilecek başlıklar
+  const testler = [
+    "5. Zimmet İşlem Türü",
+    "16. Eksik Envanter Kalemleri",
+    "21. Tutanak Tutuldu Mu?",
+    "31. Yönetici Onay Durumu",
+    "3. Araç Plakası",
+    "4. İşlem Kategorisi"
+  ];
+  
+  Logger.log("=== HEADER MAP TEST ===");
+  testler.forEach(function(t) {
+    const idx = headerMap[t];
+    Logger.log("'" + t + "' → " + (idx === undefined ? "BULUNAMADI ❌" : "index " + idx + " ✅"));
+  });
 }
