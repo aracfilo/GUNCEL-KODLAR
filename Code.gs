@@ -2777,27 +2777,52 @@ function envanterOzetHesapla(envanterBolum) {
 
 /**
  * KM özetini hesaplar (sadece araç).
+ * KM Bilgisi sayfası aylık matris yapısı:
+ * "Ocak 2026", "Şubat 2026", ..., "Aralık 2026" sütunları.
+ * En son dolu ayın değerini "Güncel KM" olarak döner.
  */
 function kmOzetHesapla(kmBolum) {
   if (!kmBolum || !kmBolum.kayitlar || kmBolum.kayitlar.length === 0) {
     return null;
   }
   
-  // Son KM kaydı
-  const sonKayit = kmBolum.kayitlar[0];
-  if (!sonKayit) return null;
+  const kayit = kmBolum.kayitlar[0];
+  if (!kayit || !kayit.detaylar || kayit.detaylar.length === 0) return null;
+  
+  // Aylık sütunları sırala — en son dolu ayı bul
+  const AY_SIRALI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                     "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
   
   let guncelKm = 0;
-  sonKayit.detaylar.forEach(function(d) {
-    if (d.label === "Güncel KM" || d.label === "KM") {
-      const sayi = parseFloat((d.deger || "0").toString().replace(/[^\d]/g, ""));
-      if (!isNaN(sayi)) guncelKm = sayi;
+  let sonAy = "";
+  
+  // AY_INGILIZCE: Date objesi başlığa dönüşmüşse "Jan", "Feb", ... arayalım
+  const AY_INGILIZCE = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+  for (let i = AY_SIRALI.length - 1; i >= 0; i--) {
+    const ay = AY_SIRALI[i];
+    const ayIng = AY_INGILIZCE[i];
+    const bulunan = kayit.detaylar.find(function(d) {
+      if (!d.label) return false;
+      const lbl = d.label.toString();
+      return lbl.indexOf(ay) !== -1 || lbl.indexOf(ayIng) !== -1;
+    });
+    if (bulunan && bulunan.deger) {
+      const sayi = parseFloat(bulunan.deger.toString().replace(/[^\d]/g, ""));
+      if (!isNaN(sayi) && sayi > 0) {
+        guncelKm = sayi;
+        sonAy = bulunan.label;
+        break;
+      }
     }
-  });
+  }
+  
+  if (guncelKm === 0) return null;
   
   return {
     guncelKm: guncelKm,
-    sonGuncelleme: sonKayit.tarih || ""
+    sonAy: sonAy
   };
 }
 
@@ -3187,15 +3212,38 @@ function detayKartiAlanlar(modul, headerMap, row) {
     ekle("Genel Mekanik", "Genel Mekanik");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Km Bilgisi") {
-    Object.keys(headerMap).forEach(function(baslik) {
-      if (baslik.indexOf("20") !== -1) {
-        const idx = headerMap[baslik];
-        if (row[idx]) {
-          detaylar.push({ label: baslik, deger: row[idx].toString() });
+  const eklendi = {}; // tekrar önleyici
+  Object.keys(headerMap).forEach(function(baslik) {
+    if (baslik.indexOf("20") === -1) return;
+    const idx = headerMap[baslik];
+    if (eklendi[idx]) return;          // bu sütun zaten eklendi
+    if (!row[idx]) return;
+    
+    // Date objesi ise → güzel formatla
+    let etiket = baslik;
+    let deger = row[idx];
+    
+    // Eğer label tarih ise → "Ocak 2026" formatına çevir
+    if (baslik.indexOf("GMT") !== -1 || baslik.indexOf("Jan") !== -1 || baslik.indexOf("Feb") !== -1) {
+      try {
+        const d = new Date(baslik);
+        if (!isNaN(d.getTime())) {
+          const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                         "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+          etiket = AYLAR[d.getMonth()] + " " + d.getFullYear();
         }
-      }
-    });
-  }
+      } catch (e) {}
+    }
+    
+    // Değer Date ise → sayıya çevir
+    if (deger instanceof Date) {
+      deger = deger.getTime();
+    }
+    
+    detaylar.push({ label: etiket, deger: deger.toString() });
+    eklendi[idx] = true;
+  });
+}
   
   return detaylar;
 }

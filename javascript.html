@@ -1927,8 +1927,8 @@ function akilliOzetRender(ozet) {
   // 5) KM (sadece araç)
   if (ozet.km && ozet.km.guncelKm > 0) {
     var kmSatir = ozetSatiri("⏲️", "Güncel KM", ozet.km.guncelKm.toLocaleString("tr-TR") + " km", "info");
-    if (ozet.km.sonGuncelleme) {
-      kmSatir += ozetSatiri("📅", "Son Güncelleme", ozet.km.sonGuncelleme, "info");
+    if (ozet.km.sonAy) {
+      kmSatir += ozetSatiri("📅", "Son Bildirim", ozet.km.sonAy, "info");
     }
     bolumler.push(
       '<div class="ozet-grup">' +
