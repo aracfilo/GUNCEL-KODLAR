@@ -162,6 +162,35 @@ function metinIceriyorMu(buyukMetin, aranan) {
   return metinNormallestir(buyukMetin).indexOf(metinNormallestir(aranan)) > -1;
 }
 
+/**
+ * Metin normalizer — sistem genelinde tolerans için.
+ * Boşluk, büyük/küçük harf, Türkçe karakter farkları görmezden gelinir.
+ * 
+ * "Ehliyet  Bitiş Tarihi " → "ehliyetbitistarihi"
+ * "MAYIS 2026"             → "mayis2026"
+ * "egzoz emisyon bitiş"    → "egzozemisyonbitis"
+ */
+function metinNormalize(s) {
+  if (s === null || s === undefined) return "";
+  return s.toString()
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i").replace(/ş/g, "s").replace(/ç/g, "c")
+    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ö/g, "o")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+/**
+ * Esnek içerme kontrolü — biri diğerini içeriyor mu?
+ * Boşluk, harf farkları görmezden gelinir.
+ * 
+ * metinIceriyorMu("MAYIS 2026", "Mayıs") → true
+ * metinIceriyorMu("Egzoz Bitiş", "egzoz") → true
+ */
+function metinIceriyorMu(metin, aranan) {
+  return metinNormalize(metin).indexOf(metinNormalize(aranan)) !== -1;
+}
+
 function getHeaderMap(sheet) {
   if (!sheet || sheet.getLastRow() === 0) return {};
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -2722,32 +2751,42 @@ function servisOzetHesapla(servisBolum) {
   }
   
   const nedenSayim = {};
+  const gidisSayim = {};
   
   servisBolum.kayitlar.forEach(function(k) {
     if (!k.detaylar) return;
     k.detaylar.forEach(function(d) {
-      // "Servis Nedeni" veya benzeri sütundan değer al
-      if (d.label === "Servis Nedeni" || d.label === "Neden" || d.label === "İşlem") {
-        const neden = (d.deger || "").toString().trim();
-        if (neden) nedenSayim[neden] = (nedenSayim[neden] || 0) + 1;
+      if (!d.label) return;
+      const lblNorm = metinNormalize(d.label);
+      const dgr = (d.deger || "").toString().trim();
+      if (!dgr) return;
+      
+      if (lblNorm === metinNormalize("Servis Nedeni")) {
+        nedenSayim[dgr] = (nedenSayim[dgr] || 0) + 1;
+      }
+      if (lblNorm === metinNormalize("Gidiş Şekli")) {
+        gidisSayim[dgr] = (gidisSayim[dgr] || 0) + 1;
       }
     });
   });
   
-  // En sık nedeni bul
-  let enSikNeden = "";
-  let enSikSayi = 0;
-  Object.keys(nedenSayim).forEach(function(n) {
-    if (nedenSayim[n] > enSikSayi) {
-      enSikSayi = nedenSayim[n];
-      enSikNeden = n;
-    }
-  });
+  function enSikBul(say) {
+    let ad = "", sayi = 0;
+    Object.keys(say).forEach(function(n) {
+      if (say[n] > sayi) { sayi = say[n]; ad = n; }
+    });
+    return { ad: ad, sayi: sayi };
+  }
+  
+  const enNeden = enSikBul(nedenSayim);
+  const enGidis = enSikBul(gidisSayim);
   
   return {
     toplam: servisBolum.kayitlar.length,
-    enSikNeden: enSikNeden,
-    enSikSayi: enSikSayi
+    enSikNeden: enNeden.ad,
+    enSikNedenSayi: enNeden.sayi,
+    enSikGidis: enGidis.ad,
+    enSikGidisSayi: enGidis.sayi
   };
 }
 
@@ -2801,11 +2840,11 @@ function kmOzetHesapla(kmBolum) {
                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   
   for (let i = AY_SIRALI.length - 1; i >= 0; i--) {
-    const ay = AY_SIRALI[i];
-    const ayIng = AY_INGILIZCE[i];
+    const ay = AY_SIRALI[i].toLocaleUpperCase("tr-TR");
+    const ayIng = AY_INGILIZCE[i].toUpperCase();
     const bulunan = kayit.detaylar.find(function(d) {
       if (!d.label) return false;
-      const lbl = d.label.toString();
+      const lbl = d.label.toString().toLocaleUpperCase("tr-TR");
       return lbl.indexOf(ay) !== -1 || lbl.indexOf(ayIng) !== -1;
     });
     if (bulunan && bulunan.deger) {
@@ -3178,12 +3217,17 @@ function detayKartiAlanlar(modul, headerMap, row) {
     ekle("Yönetici Notu", "Yönetici Notu");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Servis Kayıt") {
-    ekle("Servis Adı", "Servis Adı / Yeri");
+    ekle("Bildiren Kullanıcı", "Bildiren Kullanıcı");
+    ekle("Servis Adı", "Servis Adı");
+    ekle("Giriş Tarihi", "Servis Giriş Tarihi ve Saati");
+    ekle("Çıkış Tarihi", "Servis Çıkış Tarihi ve Saati");
     ekle("Gidiş Şekli", "Servise Gidiş Şekli");
-    ekle("Gidiş Nedeni", "Servise Gidiş Nedeni");
-    ekle("Yapılanlar", "Yapılan Onarımlar");
-    ekle("Çıkış KM", "Çıkış KM");
+    ekle("Servis Nedeni", "Servis Nedeni");
     ekle("Evrak Durumu", "Araç İçi Evrak Durumu");
+    ekle("Yapılan Onarımlar", "Yapılan Onarımlar");
+    ekle("Çıkış KM", "Çıkış KM");
+    ekle("İkame Araç", "İkame Araç Plakası");
+    ekle("Onay Durumu", "Yönetici Onay Durumu");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Envanter") {
     ekle("İlk Yardım", "İlk Yardım Çantası");
@@ -4290,4 +4334,76 @@ function headerMapTeshis() {
     const idx = headerMap[t];
     Logger.log("'" + t + "' → " + (idx === undefined ? "BULUNAMADI ❌" : "index " + idx + " ✅"));
   });
+}
+function kmDetayTeshis() {
+  const sonuc = sicilKartiGetir("arac", "34CIF093");
+  const kmB = sonuc.bolumler.find(function(b) { return b.modul === "Km Bilgisi"; });
+  if (!kmB) return Logger.log("Km Bilgisi yok");
+  Logger.log("Kayıt sayısı: " + kmB.kayitlar.length);
+  if (kmB.kayitlar[0]) {
+    Logger.log("=== DETAY LABELLER ===");
+    kmB.kayitlar[0].detaylar.forEach(function(d) {
+      Logger.log("label: '" + d.label + "' | deger: '" + d.deger + "'");
+    });
+  }
+}
+function servisYapiTeshis() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. Servis sayfası var mı?
+  const servisSayfa = ss.getSheetByName("Servis") || ss.getSheetByName("Servis Kayıt");
+  if (servisSayfa) {
+    const h = servisSayfa.getRange(1, 1, 1, servisSayfa.getLastColumn()).getValues()[0];
+    Logger.log("=== SERVİS SAYFASI BAŞLIKLARI ===");
+    Logger.log(JSON.stringify(h));
+    Logger.log("Sayfa adı: " + servisSayfa.getName());
+    Logger.log("Toplam satır: " + servisSayfa.getLastRow());
+  } else {
+    Logger.log("Servis sayfası yok (Saha Bildirimleri'nden çekiliyor)");
+  }
+  
+  // 2. 34CIF093 servis kayıtları
+  const sonuc = sicilKartiGetir("arac", "34CIF093");
+  const sB = sonuc.bolumler.find(function(b) { return b.modul === "Servis Kayıt"; });
+  if (sB && sB.kayitlar[0]) {
+    Logger.log("=== ÖRNEK SERVİS KAYIT ===");
+    Logger.log(JSON.stringify(sB.kayitlar[0], null, 2));
+  }
+  
+  // 3. Saha Bildirimleri'nden SERVİS kayıtları (ilk 2)
+  const sb = ss.getSheetByName("Saha Bildirimleri");
+  if (sb) {
+    const headers = sb.getRange(1, 1, 1, sb.getLastColumn()).getValues()[0];
+    const data = sb.getRange(2, 1, sb.getLastRow() - 1, sb.getLastColumn()).getValues();
+    const katIdx = 3; // D sütunu
+    let say = 0;
+    for (let i = 0; i < data.length && say < 2; i++) {
+      const kat = (data[i][katIdx] || "").toString().toUpperCase();
+      if (kat.indexOf("SERVİS") !== -1 || kat.indexOf("SERVIS") !== -1) {
+        Logger.log("=== SAHA SERVİS KAYIT " + (++say) + " ===");
+        for (let j = 0; j < headers.length; j++) {
+          if (data[i][j]) Logger.log(headers[j] + ": " + data[i][j]);
+        }
+      }
+    }
+  }
+}
+function servisMedyaTeshis() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("servis kayıt");
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const medyaIdx = headers.findIndex(function(h) { return h.indexOf("Medya") !== -1; });
+  
+  Logger.log("Medya sütun index: " + medyaIdx);
+  
+  // İlk 3 dolu medya kaydını yaz
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  let sayac = 0;
+  for (let i = 0; i < data.length && sayac < 3; i++) {
+    if (data[i][medyaIdx]) {
+      Logger.log("=== KAYIT " + (++sayac) + " ===");
+      Logger.log("Plaka: " + data[i][1]);
+      Logger.log("Medya HAM: " + data[i][medyaIdx]);
+    }
+  }
 }

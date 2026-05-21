@@ -1602,7 +1602,6 @@ function detaySayfaDegistir(yon) {
   _detaySayfa = Math.max(1, _detaySayfa + yon);
   detayYukle();
 }
-
 function detayYukle() {
   var liste_el = document.getElementById("detay-liste");
   if (!liste_el) return;
@@ -1669,17 +1668,7 @@ function detayRender(sonuc) {
     if (item.onayDurumu === "Onaylandı") { onayClass = "onayli"; onayMetin = "✅ ONAY"; }
     else if (item.onayDurumu === "Reddedildi") { onayClass = "reddedildi"; onayMetin = "❌ RED"; }
     
-    var detayHtml = "";
-    if (item.detaylar && item.detaylar.length > 0) {
-      detayHtml = item.detaylar.map(function(d) {
-        return '<div class="detay-satir">' +
-                 '<span class="detay-satir-label">' + escapeHtml(d.label) + ':</span>' +
-                 '<span class="detay-satir-deger">' + escapeHtml(d.deger) + '</span>' +
-               '</div>';
-      }).join('');
-    } else {
-      detayHtml = '<div class="detay-satir"><span class="detay-satir-deger" style="color:#64748b;font-style:italic;">Ek detay yok</span></div>';
-    }
+    var detayHtml = '<div class="detay-satir"><span class="detay-satir-deger" style="color:#64748b;font-style:italic;">Ek detay yok</span></div>';
     
     var kartId = "detayKart-" + idx;
     
@@ -1901,9 +1890,12 @@ function akilliOzetRender(ozet) {
   // 3) SERVİS PERFORMANSI
   if (ozet.servis && ozet.servis.toplam > 0) {
     var servisSatirlari = '';
-    servisSatirlari += ozetSatiri("🔧", "Toplam", ozet.servis.toplam + " servis", "info");
+    servisSatirlari += ozetSatiri("📈", "Toplam", ozet.servis.toplam + " servis", "info");
     if (ozet.servis.enSikNeden) {
-      servisSatirlari += ozetSatiri("📊", "En sık", ozet.servis.enSikNeden + " (" + ozet.servis.enSikSayi + " kez)", "info");
+      servisSatirlari += ozetSatiri("📊", "En sık neden", ozet.servis.enSikNeden + " (" + ozet.servis.enSikNedenSayi + " kez)", "info");
+    }
+    if (ozet.servis.enSikGidis) {
+      servisSatirlari += ozetSatiri("🚐", "En sık gidiş", ozet.servis.enSikGidis + " (" + ozet.servis.enSikGidisSayi + " kez)", "info");
     }
     bolumler.push(
       '<div class="ozet-grup">' +
@@ -1924,16 +1916,11 @@ function akilliOzetRender(ozet) {
     );
   }
   
-  // 5) KM (sadece araç)
+  // 5) KM (sadece araç) — tek satır
   if (ozet.km && ozet.km.guncelKm > 0) {
-    var kmSatir = ozetSatiri("⏲️", "Güncel KM", ozet.km.guncelKm.toLocaleString("tr-TR") + " km", "info");
-    if (ozet.km.sonAy) {
-      kmSatir += ozetSatiri("📅", "Son Bildirim", ozet.km.sonAy, "info");
-    }
     bolumler.push(
       '<div class="ozet-grup">' +
-        '<div class="ozet-grup-baslik">⏲️ KM BİLGİSİ</div>' +
-        kmSatir +
+        ozetSatiri("⏲️", "Güncel KM", ozet.km.guncelKm.toLocaleString("tr-TR") + " km", "info") +
       '</div>'
     );
   }
@@ -2026,8 +2013,9 @@ function sicilKartiRender(sonuc) {
           var detayMetni = "";
           if (k.detaylar && k.detaylar.length > 0) {
             detayMetni = k.detaylar.map(function(d) {
-              return escapeHtml(d.label) + ": " + escapeHtml(d.deger);
-            }).join(" · ");
+              return '<span class="kayit-mini-label">' + escapeHtml(d.label) + ':</span> ' +
+                     '<span class="kayit-mini-deger">' + escapeHtml(d.deger) + '</span>';
+            }).join(' <span class="kayit-mini-ayrac">·</span> ');
           }
           return '<div class="arac-bolum-kayit">' +
                    (k.tarih ? '<div class="arac-bolum-tarih">📅 ' + escapeHtml(k.tarih + " " + k.saat) + '</div>' : '') +
