@@ -155,7 +155,19 @@ function ekranDegistir(h) {
       konteyner.innerHTML = aracKunyeHtml(aktifAracKunyesi, kompaktMi);
     }
   }
-}
+  
+  }
+
+// AŞAMA F — KM ekranı görünür olunca otomatik hazırla
+setInterval(function() {
+  var km = document.getElementById("ekran-km");
+  if (km && km.classList.contains("active")) {
+    var sel = document.getElementById("km-Ay");
+    if (sel && sel.options.length === 0 && typeof kmEkraniHazirla === 'function') {
+      kmEkraniHazirla();
+    }
+  }
+}, 500);
 
 // === SAHA GİRİŞ: PLAKA + İSİM KONTROLÜ (Saha ekranındaki) ===
 function sahaGirisKontrol() {
@@ -2397,12 +2409,70 @@ function kaydetPeriyodik() {
 }
 
 // === KM ===
+var _kmOncekiKM = 0; // önceki ay için backend'den gelen değer
+
+function kmEkraniHazirla() {
+  var AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  var simdi = new Date();
+  var yil = simdi.getFullYear();
+  var ay = simdi.getMonth();
+  
+  var oncekiAy = (ay === 0) ? 11 : ay - 1;
+  var oncekiYil = (ay === 0) ? yil - 1 : yil;
+  
+  var buAyAd = AYLAR[ay] + " " + yil;
+  var oncekiAyAd = AYLAR[oncekiAy] + " " + oncekiYil;
+  
+  var sel = document.getElementById("km-Ay");
+  if (sel) {
+    sel.innerHTML = '<option value="bu" selected>📅 ' + buAyAd.toUpperCase() + ' (bu ay)</option>' +
+                    '<option value="onceki">' + oncekiAyAd.toUpperCase() + '</option>';
+  }
+  
+  // Plaka modül başında seçilmiş
+  var plaka = (typeof aktifPlaka !== 'undefined') ? aktifPlaka : (window.aktifPlaka || "");
+  alert("DEBUG plaka: " + plaka);
+  if (!plaka) { alert("PLAKA BOŞ - çekim yapılmadı"); return; }
+  
+  // Backend'den önceki ay KM'sini çek
+  if (typeof google !== 'undefined' && google.script) {
+    google.script.run
+      .withSuccessHandler(function(km) {
+        _kmOncekiKM = km || 0;
+        alert("DEBUG backend cevabı: " + km);
+        var bilgi = document.getElementById("km-OncekiBilgi");
+        if (bilgi) {
+          bilgi.innerText = (_kmOncekiKM > 0) ? "Önceki ay (" + oncekiAyAd + "): " + _kmOncekiKM.toLocaleString("tr-TR") + " km" : "";
+        }
+      })
+      .withFailureHandler(function(err){ _kmOncekiKM = 0; alert("DEBUG HATA: " + err.message); })
+      .oncekiAyKMGetir(plaka);
+  } else {
+    alert("DEBUG: google.script YOK");
+  }
+}
+
 function kaydetKM() {
-  var km = document.getElementById("km-Bilgi").value;
-  if (!km) return gUyari("HATA", "KM bilgisi giriniz.");
+  var kmStr = document.getElementById("km-Bilgi").value;
+  if (!kmStr) return gUyari("HATA", "KM bilgisi giriniz.");
+  
+  // GEÇİCİ TEŞHİS
+  alert("DEBUG → _kmOncekiKM: " + _kmOncekiKM + " | Girilen: " + kmStr);
+  
+  var km = parseInt(kmStr, 10);
+  if (isNaN(km) || km <= 0) return gUyari("HATA", "Geçerli bir KM değeri giriniz.");
+  
+  // Önceki aydan az ise reddet
+  if (_kmOncekiKM > 0 && km < _kmOncekiKM) {
+    return gUyari("HATA", "Girdiğiniz KM önceki aydan (" + _kmOncekiKM.toLocaleString("tr-TR") + ") az. Lütfen yeniden kontrol ediniz.");
+  }
+  
+  var aySec = document.getElementById("km-Ay");
+  var ayDeger = aySec ? aySec.value : "bu";
   
   raporla("GÜNCEL KM BİLGİSİ", {
-    "Güncel KM": km
+    "Güncel KM": km,
+    "KM Ay Seçimi": ayDeger
   }, [], null, null);
 }
 // === SİCİL EXCEL İNDİR ===

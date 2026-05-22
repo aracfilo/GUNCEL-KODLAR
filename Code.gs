@@ -18,8 +18,18 @@
 const CONFIG = {
   VERSION: "2.0.0",
   
-  // ⚠️ DİKKAT: Bu Drive klasör ID'sini gerçek ID ile değiştirin!
-  DRIVE_KLASOR_ID: "1McEpURgkpKXaLxCs4-ZsxZUTVzaY6i77apGhBLVINA9t2EtK_7KLYoN_snp9O8wui53mQBHo",
+  // ⚠️ ESKI — Mevcut foto yükleme akışı için (geriye dönük uyumluluk)
+  DRIVE_KLASOR_ID: "13DiR5za-i-LWckDes6DRnetJNLtPcZZa",
+  
+  // === YENİ DRIVE YAPISI (AŞAMA F) ===
+  DRIVE: {
+    ANA_KASA:           "1zCqTd085RPXw9Ltg9leffpytKExUYjiN",
+    SISTEM_SABLONLARI:  "14hdUQHLGH91lk-JGZgTjccATvhdpDYR0",
+    SAHA_BILDIRIMLERI:  "13DiR5za-i-LWckDes6DRnetJNLtPcZZa",
+    PERIYODIK_KONTROL:  "1Y6cSQ0jy1VdLgyc6tKhIP9ciA6FfAqVR",
+    ZIMMET_SICIL:       "1ccfPiCzYyaHJ91n-tusBGbH5nL5XyTcX",
+    EVRAK_KUTUPHANE:    "1lJTLzanczmgB__ZYk3GOXoFijP0uPbn9"
+  },
   
   // Sheet sayfa isimleri (anayasaya göre)
   SHEET: {
@@ -938,6 +948,20 @@ function getDriveKlasor() {
  */
 function fotografYukle(base64Data, dosyaAdi, mimeType) {
   try {
+    // AŞAMA F: Akıllı yönlendirme — dosyaAdi PLAKA_KONU_xxx formundaysa akıllı moda
+    if (dosyaAdi && dosyaAdi.indexOf("_") !== -1) {
+      const parcalar = dosyaAdi.split("_");
+      if (parcalar.length >= 2) {
+        const plaka = parcalar[0];
+        const konu = parcalar[1].replace(/\.(jpg|jpeg|png)$/i, "");
+        if (/^\d{2}[A-Z]+\d+$/i.test(plaka.replace(/\s/g, ""))) {
+          const sonuc = fotografYukleAkilli(base64Data, plaka, konu, mimeType);
+          if (sonuc.basarili) return sonuc.url;
+        }
+      }
+    }
+    
+    // ESKI mantık — geriye dönük uyum
     const klasor = getDriveKlasor();
     const blob = Utilities.newBlob(
       Utilities.base64Decode(base64Data),
@@ -951,6 +975,94 @@ function fotografYukle(base64Data, dosyaAdi, mimeType) {
     logYaz("HATA", "fotografYukle", e.message);
     return "HATA: " + e.message;
   }
+}
+
+
+/**
+ * AŞAMA F — AKILLI FOTOĞRAF YÜKLEME
+ * Plaka + konu + tarih ile otomatik adlandırır, doğru klasöre koyar, sıra numarası ekler.
+ * @param {string} base64Data - Foto verisi
+ * @param {string} plaka      - Araç plakası
+ * @param {string} konu       - "KAZA", "HASAR", "GECICI", "ENVANTER", "PERIYODIK", "ZIMMET" gibi
+ * @param {string} mimeType   - "image/jpeg" varsayılan
+ */
+function fotografYukleAkilli(base64Data, plaka, konu, mimeType) {
+  try {
+    if (!plaka || !konu) {
+      return { basarili: false, mesaj: "Plaka veya konu boş" };
+    }
+    
+    const plakaUst = plaka.toString().trim().toUpperCase().replace(/\s+/g, "");
+    const konuUst = konu.toString().trim().toUpperCase().replace(/\s+/g, "-");
+    const tarih = Utilities.formatDate(new Date(), "Europe/Istanbul", "dd.MM.yyyy");
+    const yil = Utilities.formatDate(new Date(), "Europe/Istanbul", "yyyy");
+    
+    // Hedef klasörü belirle
+    let hedefKlasor;
+    if (konuUst === "PERIYODIK") {
+      // 03_PERIYODIK / plaka / Aktif (eski Aktif → Arşiv'e taşınır)
+      const ana = DriveApp.getFolderById(CONFIG.DRIVE.PERIYODIK_KONTROL);
+      const plakaKlasoru = altKlasorBulVeyaAc(ana, plakaUst);
+      hedefKlasor = altKlasorBulVeyaAc(plakaKlasoru, "Aktif");
+      const arsivKlasor = altKlasorBulVeyaAc(plakaKlasoru, "Arşiv");
+      // Aktif'teki eski periyodik fotoları Arşiv'e taşı
+      const eskiler = hedefKlasor.getFiles();
+      while (eskiler.hasNext()) {
+        const eski = eskiler.next();
+        eski.moveTo(arsivKlasor);
+      }
+    } else if (konuUst === "ZIMMET") {
+      // 04_ZIMMET VE SICIL / Aktif Zimmetler
+      const ana = DriveApp.getFolderById(CONFIG.DRIVE.ZIMMET_SICIL);
+      hedefKlasor = altKlasorBulVeyaAc(ana, "Aktif Zimmetler");
+    } else {
+      // 02_SAHA BILDIRIMLERI / yıl klasörü
+      const ana = DriveApp.getFolderById(CONFIG.DRIVE.SAHA_BILDIRIMLERI);
+      hedefKlasor = altKlasorBulVeyaAc(ana, yil);
+    }
+    
+    // Sıra numarası bul (aynı plaka + aynı konu + aynı gün)
+    const aramaPrefix = plakaUst + "_" + konuUst + "_" + tarih;
+    let sayac = 1;
+    const dosyalar = hedefKlasor.getFilesByName(aramaPrefix + "_01.jpg");
+    if (dosyalar.hasNext()) {
+      // En az 01 var, sıradakini bul
+      sayac = 2;
+      while (true) {
+        const numStr = (sayac < 10) ? "0" + sayac : sayac.toString();
+        const it = hedefKlasor.getFilesByName(aramaPrefix + "_" + numStr + ".jpg");
+        if (!it.hasNext()) break;
+        sayac++;
+        if (sayac > 99) break; // güvenlik
+      }
+    }
+    const sira = (sayac < 10) ? "0" + sayac : sayac.toString();
+    const dosyaAdi = aramaPrefix + "_" + sira + ".jpg";
+    
+    // Yükle
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType || "image/jpeg",
+      dosyaAdi
+    );
+    const dosya = hedefKlasor.createFile(blob);
+    dosya.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    return { basarili: true, url: dosya.getUrl(), dosyaAdi: dosyaAdi };
+  } catch (e) {
+    logYaz("HATA", "fotografYukleAkilli", e.message);
+    return { basarili: false, mesaj: e.message };
+  }
+}
+
+
+/**
+ * Alt klasör yoksa açar, varsa döner.
+ */
+function altKlasorBulVeyaAc(anaKlasor, altAd) {
+  const mevcut = anaKlasor.getFoldersByName(altAd);
+  if (mevcut.hasNext()) return mevcut.next();
+  return anaKlasor.createFolder(altAd);
 }
 
 // =======================================================================
@@ -4188,4 +4300,93 @@ function sicilExcelOlustur(tip, deger) {
     logYaz("HATA", "sicilExcelOlustur", e.message);
     return { basarili: false, mesaj: e.message };
   }
+}
+function driveTesti() {
+  const adlar = Object.keys(CONFIG.DRIVE);
+  adlar.forEach(function(ad) {
+    const id = CONFIG.DRIVE[ad];
+    try {
+      const klasor = DriveApp.getFolderById(id);
+      Logger.log("✅ " + ad + " → " + klasor.getName());
+    } catch (e) {
+      Logger.log("🔴 " + ad + " → HATA: " + e.message);
+    }
+  });
+}
+function fotoYuklemeTesti() {
+  // 1x1 piksel kırmızı JPG (test için minik foto)
+  const ufakFoto = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB/9sAQwEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB/8AAEQgAAQABAwEiAAIRAQMRAf/EABUAAQEAAAAAAAAAAAAAAAAAAAAJ/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/v//Z";
+  
+  Logger.log("=== Test 1: KAZA (02 klasörüne gitmeli) ===");
+  const t1 = fotografYukleAkilli(ufakFoto, "34TEST01", "KAZA", "image/jpeg");
+  Logger.log(JSON.stringify(t1));
+  
+  Logger.log("=== Test 2: PERIYODIK (03/plaka klasörüne) ===");
+  const t2 = fotografYukleAkilli(ufakFoto, "34TEST01", "PERIYODIK", "image/jpeg");
+  Logger.log(JSON.stringify(t2));
+  
+  Logger.log("=== Test 3: ZIMMET (04/Aktif Zimmetler) ===");
+  const t3 = fotografYukleAkilli(ufakFoto, "34TEST01", "ZIMMET", "image/jpeg");
+  Logger.log(JSON.stringify(t3));
+  
+  Logger.log("=== Test 4: Aynı plaka+konu+gün → sıra numarası 02 olmalı ===");
+  const t4 = fotografYukleAkilli(ufakFoto, "34TEST01", "KAZA", "image/jpeg");
+  Logger.log(JSON.stringify(t4));
+}
+/**
+ * AŞAMA F — Önceki ay KM bilgisini getirir.
+ * Frontend KM formu için.
+ */
+function oncekiAyKMGetir(plaka) {
+  try {
+    const plakaUst = plaka.toString().trim().toUpperCase().replace(/\s+/g, "");
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Km Bilgisi");
+    if (!sheet) return 0;
+    
+    const lr = sheet.getLastRow();
+    if (lr < 2) return 0;
+    
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const data = sheet.getRange(2, 1, lr - 1, sheet.getLastColumn()).getValues();
+    
+    // Plaka sütunu bul
+    let plakaIdx = -1;
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i].toString().trim().toUpperCase() === "PLAKA") { plakaIdx = i; break; }
+    }
+    if (plakaIdx === -1) return 0;
+    
+    // Plakanın satırını bul
+    let satir = null;
+    for (let i = 0; i < data.length; i++) {
+      const p = (data[i][plakaIdx] || "").toString().trim().toUpperCase().replace(/\s+/g, "");
+      if (p === plakaUst) { satir = data[i]; break; }
+    }
+    if (!satir) return 0;
+    
+    // Önceki ayın sütununu bul
+    const simdi = new Date();
+    const oncekiAy = (simdi.getMonth() === 0) ? 11 : simdi.getMonth() - 1;
+    const oncekiYil = (simdi.getMonth() === 0) ? simdi.getFullYear() - 1 : simdi.getFullYear();
+    const AYLAR = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"];
+    const hedefAy = AYLAR[oncekiAy] + " " + oncekiYil;
+    
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i].toString().trim().toUpperCase();
+      if (h === hedefAy || h.indexOf(AYLAR[oncekiAy]) !== -1 && h.indexOf(oncekiYil.toString()) !== -1) {
+        const deger = satir[i];
+        return (deger && !isNaN(parseInt(deger))) ? parseInt(deger) : 0;
+      }
+    }
+    
+    return 0;
+  } catch (e) {
+    logYaz("HATA", "oncekiAyKMGetir", e.message);
+    return 0;
+  }
+}
+function kmTesti() {
+  const sonuc = oncekiAyKMGetir("34CIF093");
+  Logger.log("Önceki ay KM: " + sonuc);
 }
