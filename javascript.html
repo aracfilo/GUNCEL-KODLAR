@@ -2319,7 +2319,7 @@ function kaydetEnvanterB() {
   
   raporla("ENVANTER BİLDİRİMİ", {
     "İşlem Yönü": "Temin Bildirimi",
-    "Eksik Envanter Kalemleri": c.join(", ")
+    "Temin Edilenler": c.join(", ")
   }, [], null, null);
 }
 
@@ -2429,35 +2429,35 @@ function kmEkraniHazirla() {
                     '<option value="onceki">' + oncekiAyAd.toUpperCase() + '</option>';
   }
   
-  // Plaka modül başında seçilmiş
-  var plaka = (typeof aktifPlaka !== 'undefined') ? aktifPlaka : (window.aktifPlaka || "");
-  alert("DEBUG plaka: " + plaka);
-  if (!plaka) { alert("PLAKA BOŞ - çekim yapılmadı"); return; }
+  // Plaka modül başında seçilmiş - aktifAracKunyesi veya pSelect'ten al
+  var plaka = "";
+  if (typeof aktifAracKunyesi !== 'undefined' && aktifAracKunyesi && aktifAracKunyesi.plaka) {
+    plaka = aktifAracKunyesi.plaka;
+  }
+  if (!plaka) {
+    var pSel = document.getElementById("pSelect");
+    if (pSel) plaka = pSel.value || "";
+  }
+  if (!plaka) return;
   
   // Backend'den önceki ay KM'sini çek
   if (typeof google !== 'undefined' && google.script) {
     google.script.run
       .withSuccessHandler(function(km) {
         _kmOncekiKM = km || 0;
-        alert("DEBUG backend cevabı: " + km);
         var bilgi = document.getElementById("km-OncekiBilgi");
         if (bilgi) {
           bilgi.innerText = (_kmOncekiKM > 0) ? "Önceki ay (" + oncekiAyAd + "): " + _kmOncekiKM.toLocaleString("tr-TR") + " km" : "";
         }
       })
-      .withFailureHandler(function(err){ _kmOncekiKM = 0; alert("DEBUG HATA: " + err.message); })
+      .withFailureHandler(function(){ _kmOncekiKM = 0; })
       .oncekiAyKMGetir(plaka);
-  } else {
-    alert("DEBUG: google.script YOK");
   }
 }
 
 function kaydetKM() {
   var kmStr = document.getElementById("km-Bilgi").value;
   if (!kmStr) return gUyari("HATA", "KM bilgisi giriniz.");
-  
-  // GEÇİCİ TEŞHİS
-  alert("DEBUG → _kmOncekiKM: " + _kmOncekiKM + " | Girilen: " + kmStr);
   
   var km = parseInt(kmStr, 10);
   if (isNaN(km) || km <= 0) return gUyari("HATA", "Geçerli bir KM değeri giriniz.");

@@ -1456,14 +1456,22 @@ function altSayfa_Servis(ss, payload, medyaResult) {
 function altSayfa_Envanter(ss, payload) {
   let sheet = ss.getSheetByName(CONFIG.SHEET.ENVANTER);
   if (!sheet) sheet = ss.insertSheet(CONFIG.SHEET.ENVANTER);
-  const baslik = ["Sıra No", "Plaka", "Son Kontrol Tarihi", "Eksik Olanlar", "Bildiren Kullanıcı", "Tutanak Durumu", "Yönetici Onay Durumu", "Red Gerekçesi"];
+  const baslik = ["Sıra No", "Plaka", "Son Kontrol Tarihi", "İşlem Türü", "Eksik Olanlar", "Temin Edilenler", "Bildiren Kullanıcı", "Tutanak Durumu", "Yönetici Onay Durumu", "Red Gerekçesi"];
   sheetBaslikKur(sheet, baslik);
   const sn = sheet.getLastRow();
+  
+  const islemYonu = payload["İşlem Yönü"] || "Eksik Bildirimi";
+  const isTemin = (islemYonu.indexOf("Temin") !== -1);
+  
   sheet.appendRow([
-    sn, payload["Araç Plakası"], new Date(),
-    payload["Eksik Envanter Kalemleri"] || "",
+    sn,
+    payload["Araç Plakası"],
+    new Date(),
+    islemYonu,
+    isTemin ? "" : (payload["Eksik Envanter Kalemleri"] || ""),
+    isTemin ? (payload["Temin Edilenler"] || payload["Eksik Envanter Kalemleri"] || "") : "",
     payload["Bildiren Kullanıcı"],
-    payload["Tutanak Durumu"] || ""
+    isTemin ? "" : (payload["Tutanak Durumu"] || "")
   ]);
 }
 
@@ -3357,6 +3365,10 @@ function detayKartiAlanlar(modul, headerMap, row) {
     ekle("Onay Durumu", "Yönetici Onay Durumu");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Envanter") {
+    ekle("İşlem Türü", "İşlem Türü");
+    ekle("Eksik Olanlar", "Eksik Olanlar");
+    ekle("Temin Edilenler", "Temin Edilenler");
+    ekle("Tutanak Durumu", "Tutanak Durumu");
     ekle("İlk Yardım", "İlk Yardım Çantası");
     ekle("Reflektör", "Reflektör");
     ekle("Kriko", "Kriko");
