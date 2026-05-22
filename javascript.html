@@ -1722,6 +1722,8 @@ var _sicilPersonelCache = null; // Personel listesi cache
 function sicilKartiAc(tip) {
   _sicilTip = tip;
   _sicilGenisBolumler = {};
+  window.sicilAktifDeger = null;
+  window.sicilAktifTip = tip;
   
   // Başlık + ikon ayarla
   var baslik = document.getElementById("sicil-baslik-yazi");
@@ -1811,6 +1813,9 @@ function sicilAra() {
 }
 
 function sicilSec(deger) {
+  window.sicilAktifTip = _sicilTip;
+  window.sicilAktifDeger = deger;
+  
   var input = document.getElementById("sicil-arama");
   if (input) input.value = deger;
   
@@ -2399,5 +2404,62 @@ function kaydetKM() {
   raporla("GÜNCEL KM BİLGİSİ", {
     "Güncel KM": km
   }, [], null, null);
+}
+// === SİCİL EXCEL İNDİR ===
+function sicilExcelIndir() {
+  const btn = document.getElementById('sicil-excel-btn');
+  if (!btn) return;
+  
+  const tip = window.sicilAktifTip || 'arac';
+  const deger = window.sicilAktifDeger;
+  const inputDeger = (document.getElementById('sicil-arama') || {}).value;
+  
+  if (!deger || !inputDeger || inputDeger.trim() === '') {
+    alert('Önce plaka veya personel seçin.');
+    return;
+  }
+  if (deger !== inputDeger.trim()) {
+    alert('Önce listeden geçerli bir seçim yapın.');
+    return;
+  }
+  
+  const eskiYazi = btn.innerHTML;
+  btn.innerHTML = '⏳ Hazırlanıyor...';
+  btn.disabled = true;
+  
+  google.script.run
+    .withSuccessHandler(function(sonuc) {
+      btn.innerHTML = eskiYazi;
+      btn.disabled = false;
+      if (sonuc && sonuc.basarili) {
+        window.open(sonuc.url, '_blank');
+      } else {
+        alert('Excel oluşturulamadı: ' + (sonuc && sonuc.mesaj ? sonuc.mesaj : 'Bilinmeyen hata'));
+      }
+    })
+    .withFailureHandler(function(e) {
+      btn.innerHTML = eskiYazi;
+      btn.disabled = false;
+      alert('Hata: ' + e.message);
+    })
+    .sicilExcelOlustur(tip, deger);
+}
+// === SİCİL YENİLE ===
+function sicilYenile() {
+  const deger = window.sicilAktifDeger;
+  if (!deger) {
+    alert('Önce plaka veya personel seçin.');
+    return;
+  }
+  const btn = document.getElementById('sicil-yenile-btn');
+  const eskiYazi = btn.innerHTML;
+  btn.innerHTML = '⏳ Yenileniyor...';
+  btn.disabled = true;
+  _sicilSonVeri = null;
+  sicilSec(deger);
+  setTimeout(function() {
+    btn.innerHTML = eskiYazi;
+    btn.disabled = false;
+  }, 1500);
 }
 </script>

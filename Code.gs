@@ -2522,6 +2522,14 @@ function sicilKartiGetir(tip, deger) {
   try {
     if (!tip || !deger) return { basarili: false, mesaj: "Tip veya değer boş" };
     
+    // === CACHE KONTROL (5 dakika) ===
+    const cacheAnahtar = "sicil_" + tip + "_" + deger.toString().trim().toUpperCase();
+    const cache = CacheService.getScriptCache();
+    const cacheVeri = cache.get(cacheAnahtar);
+    if (cacheVeri) {
+      try { return JSON.parse(cacheVeri); } catch(e) { /* bozuksa devam et */ }
+    }
+    
     const degerNormal = deger.toString().trim().toUpperCase();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const SON_N = 3;
@@ -3003,7 +3011,7 @@ function gunFarkHesapla(tarih) {
     // === AŞAMA C1: AKILLI ÖZET HESABI ===
     const ozet = sicilOzetHesapla(tip, degerNormal, bolumler);
     
-    return {
+    const sonuc = {
       basarili: true,
       tip: tip,
       deger: degerNormal,
@@ -3011,6 +3019,13 @@ function gunFarkHesapla(tarih) {
       bolumler: bolumler,
       ozet: ozet
     };
+    
+    // === CACHE'E YAZ (5 dakika = 300 sn) ===
+    try {
+      cache.put(cacheAnahtar, JSON.stringify(sonuc), 300);
+    } catch(e) { /* cache dolu olabilir, sessizce geç */ }
+    
+    return sonuc;
     
   } catch (e) {
     logYaz("HATA", "sicilKartiGetir", e.message);
@@ -3198,10 +3213,9 @@ function detayKartiAlanlar(modul, headerMap, row) {
   }
   
   if (modul === "Zimmet İşlemleri") {
-    ekle("İşlem Türü", "İşlem Türü");
-    ekle("Uygunluk", "Devir Anındaki Hasar Durumu");
-    ekle("Teslim Eden", "Teslim Eden");
-    ekle("Not", "Not");
+    ekle("İşlem Türü", "İşlem Türü (Zimmet Alma / Zimmet Devri / Emanet Verme)");
+    ekle("Teslim Eden", "Teslim Eden (Aracı bırakan)");
+    ekle("Uygunluk", "Devir Anındaki Hasar Durumu (Tam / Eksik Var)");
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Geçici Kullanım") {
     ekle("İşlem Yönü", "İŞLEM YÖNÜ");
@@ -3212,10 +3226,11 @@ function detayKartiAlanlar(modul, headerMap, row) {
     ekle("Red Gerekçesi", "Red Gerekçesi");
   } else if (modul === "Kaza/Hasar") {
     ekle("Olay Türü", "Olay Türü");
-    ekle("Tutanak", "Tutanak Durumu");
     ekle("Hasar Detayı", "Hasar Detayı");
-    ekle("Yönetici Notu", "Yönetici Notu");
+    ekle("Tutanak", "Tutanak Durumu");
+    ekle("Onay Durumu", "Yönetici Onay Durumu");
     ekle("Red Gerekçesi", "Red Gerekçesi");
+    ekle("Medyalar", "Kaza ve Tutanak Medyaları (Linkler)");
   } else if (modul === "Servis Kayıt") {
     ekle("Bildiren Kullanıcı", "Bildiren Kullanıcı");
     ekle("Servis Adı", "Servis Adı");
@@ -4050,360 +4065,127 @@ function debugDashboardOku() {
   Logger.log("===== DASHBOARD VERİSİ =====");
   Logger.log(JSON.stringify(sonuc, null, 2));
 }
-function dashboardTest() {
-  const sonuc = dashboardVerisiOku();
-  Logger.log("Tip: " + typeof sonuc);
-  Logger.log("hata var mı: " + (sonuc && sonuc.hata));
-  Logger.log("bekleyenOnay: " + (sonuc && sonuc.bekleyenOnay));
-  Logger.log("bugunKayit: " + (sonuc && sonuc.bugunKayit));
-  Logger.log("acilDurumlar: " + JSON.stringify(sonuc && sonuc.acilDurumlar));
-  Logger.log("sonGuncelleme TİPİ: " + typeof (sonuc && sonuc.sonGuncelleme));
-  Logger.log("sonGuncelleme: " + (sonuc && sonuc.sonGuncelleme));
-}
 
-function acilTespitCanliTest() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // KAZA — manuel olarak acilDurumTespit'i çalıştır
-  const kazaSheet = ss.getSheetByName(CONFIG.SHEET.KAZA);
-  const kazaHeader = getHeaderMap(kazaSheet);
-  Logger.log("=== KAZA TEST ===");
-  Logger.log("headerMap keys: " + Object.keys(kazaHeader).join(", "));
-  Logger.log("Olay Türü index: " + kazaHeader["Olay Türü"]);
-  Logger.log("Tutanak Durumu index: " + kazaHeader["Tutanak Durumu"]);
-  
-  const kazaData = kazaSheet.getRange(2, 1, kazaSheet.getLastRow() - 1, kazaSheet.getLastColumn()).getValues();
-  kazaData.forEach(function(row, i) {
-    // Plaka ve tarih index — dashboardVerisiHazirla nasıl buluyor bak
-    const plakaIdx = kazaHeader["Plaka"];
-    const tarihIdx = kazaHeader["Tarih"] !== undefined ? kazaHeader["Tarih"] : kazaHeader["Bildirim Tarihi"];
-    
-    Logger.log("--- Satır " + (i+2) + " ---");
-    Logger.log("plakaIdx: " + plakaIdx + " | tarihIdx: " + tarihIdx);
-    
-    // Onay durumunu da yazdır
-    const onayIdx = kazaHeader["Yönetici Onay Durumu"];
-    Logger.log("Onay Durumu: '" + (onayIdx !== undefined ? row[onayIdx] : "SÜTUN YOK") + "'");
-    
-    // Fonksiyonu çağır
-    const sonuc = acilDurumTespit("Kaza/Hasar", kazaHeader, row, plakaIdx !== undefined ? plakaIdx : -1, tarihIdx !== undefined ? tarihIdx : -1);
-    Logger.log("acilDurumTespit DÖNDÜ: " + JSON.stringify(sonuc));
-  });
-  
-  // === GEÇİCİ TEST ===
-  Logger.log("");
-  Logger.log("=== GECICI TEST ===");
-  const gSheet = ss.getSheetByName(CONFIG.SHEET.GECICI);
-  const gHeader = getHeaderMap(gSheet);
-  
-  const gData = gSheet.getRange(2, 1, gSheet.getLastRow() - 1, gSheet.getLastColumn()).getValues();
-  gData.forEach(function(row, i) {
-    const plakaIdx = gHeader["PLAKA"] !== undefined ? gHeader["PLAKA"] : gHeader["Plaka"];
-    const tarihIdx = gHeader["TARİH"] !== undefined ? gHeader["TARİH"] : gHeader["Tarih"];
-    const onayIdx = gHeader["Yönetici Onay Durumu"];
-    
-    Logger.log("--- Geçici Satır " + (i+2) + " ---");
-    Logger.log("plakaIdx: " + plakaIdx + " | tarihIdx: " + tarihIdx);
-    Logger.log("Onay Durumu: '" + (onayIdx !== undefined ? row[onayIdx] : "SÜTUN YOK") + "'");
-    
-    // Hasar beyanı sütununu manuel kontrol
-    const hasarIdx = gHeader["YENİ HASAR VEYA EKSİK BEYANI"];
-    Logger.log("YENİ HASAR sütun index: " + hasarIdx);
-    if (hasarIdx !== undefined) {
-      const hasarDeger = row[hasarIdx];
-      Logger.log("Hasar Beyanı: '" + hasarDeger + "'");
-      Logger.log("metinIceriyorMu('Yeni Hasar') sonuç: " + metinIceriyorMu(hasarDeger, "Yeni Hasar"));
-      Logger.log("metinIceriyorMu('Yeni Eksik') sonuç: " + metinIceriyorMu(hasarDeger, "Yeni Eksik"));
+/**
+ * AŞAMA C4 — SİCİL EXCEL OLUŞTUR (A — Tek Sayfa)
+ * Sicil verisini tek sayfada Excel olarak üretir, indirme URL'i döner.
+ */
+function sicilExcelOlustur(tip, deger) {
+  try {
+    const sonuc = sicilKartiGetir(tip, deger);
+    if (!sonuc || !sonuc.basarili) {
+      return { basarili: false, mesaj: "Sicil verisi alınamadı" };
     }
     
-    const sonuc = acilDurumTespit("Geçici Kullanım", gHeader, row, 
-                                   plakaIdx !== undefined ? plakaIdx : -1, 
-                                   tarihIdx !== undefined ? tarihIdx : -1);
-    Logger.log("acilDurumTespit DÖNDÜ: " + JSON.stringify(sonuc));
-  });
-}
-function sicilOzetTest() {
-  // ARAÇ TEST
-  const aracSonuc = sicilKartiGetir("arac", "34CIF093");
-  Logger.log("=== ARAÇ AKILLI ÖZET ===");
-  Logger.log(JSON.stringify(aracSonuc.ozet, null, 2));
-  
-  // PERSONEL TEST
-  const personelSonuc = sicilKartiGetir("personel", "AŞKIN ŞAHİN");
-  Logger.log("=== PERSONEL AKILLI ÖZET ===");
-  Logger.log(JSON.stringify(personelSonuc.ozet, null, 2));
-}
-function sicilTeshis() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. ARAÇ - Sicil ham veri
-  const aracSonuc = sicilKartiGetir("arac", "34CIF093");
-  Logger.log("=== ARAÇ BOLUMLER (modul + toplam) ===");
-  aracSonuc.bolumler.forEach(function(b) {
-    Logger.log(b.modul + ": " + b.toplam);
-  });
-  
-  // 2. ARAÇ - Trafik Cezaları İçeriği
-  const trafikB = aracSonuc.bolumler.find(function(b) { return b.modul === "Trafik Cezaları"; });
-  if (trafikB && trafikB.kayitlar[0]) {
-    Logger.log("=== TRAFİK KAYIT 1 - ARAÇ ===");
-    Logger.log(JSON.stringify(trafikB.kayitlar[0], null, 2));
-  }
-  
-  // 3. Bakım Genel başlıkları
-  const bakim = ss.getSheetByName("Bakım Genel");
-  if (bakim) {
-    const headers = bakim.getRange(1, 1, 1, bakim.getLastColumn()).getValues()[0];
-    Logger.log("=== BAKIM GENEL BAŞLIKLARI ===");
-    Logger.log(JSON.stringify(headers));
+    const tarih = Utilities.formatDate(new Date(), "Europe/Istanbul", "dd.MM.yyyy HH:mm");
+    const tarihDosya = Utilities.formatDate(new Date(), "Europe/Istanbul", "yyyy-MM-dd");
+    const tipAd = (tip === "arac") ? "Arac" : "Personel";
+    const dosyaAd = "Sicil_" + tipAd + "_" + deger.toString().replace(/\s+/g, "_") + "_" + tarihDosya;
     
-    // 34CIF093 için satır
-    const data = bakim.getRange(2, 1, bakim.getLastRow() - 1, bakim.getLastColumn()).getValues();
-    const plakaIdx = headers.indexOf("Plaka");
-    for (let i = 0; i < data.length; i++) {
-      const p = (data[i][plakaIdx] || "").toString().trim();
-      if (p.replace(/\s/g, "").toUpperCase() === "34CIF093") {
-        Logger.log("=== BAKIM SATIRI - 34CIF093 ===");
-        Logger.log(JSON.stringify(data[i]));
-        break;
+    const ss = SpreadsheetApp.create(dosyaAd);
+    const sheet = ss.getSheets()[0];
+    sheet.setName("Sicil");
+    
+    let r = 1;
+    
+    // BAŞLIK
+    sheet.getRange(r, 1).setValue("SİCİL KARTI").setFontSize(16).setFontWeight("bold");
+    sheet.getRange(r, 3).setValue("Tarih: " + tarih);
+    r += 2;
+    
+    sheet.getRange(r, 1).setValue(tip === "arac" ? "Plaka:" : "Personel:").setFontWeight("bold");
+    sheet.getRange(r, 2).setValue(deger);
+    r += 2;
+    
+    // KÜNYE
+    if (sonuc.kunye) {
+      sheet.getRange(r, 1, 1, 3).merge().setValue("ARAÇ KÜNYESİ")
+        .setFontSize(13).setFontWeight("bold").setBackground("#fef3c7");
+      r++;
+      Object.keys(sonuc.kunye).forEach(function(k) {
+        sheet.getRange(r, 1).setValue(k).setFontWeight("bold");
+        sheet.getRange(r, 2, 1, 2).merge().setValue(sonuc.kunye[k]);
+        r++;
+      });
+      r++;
+    }
+    
+    // AKILLI ÖZET
+    if (sonuc.ozet) {
+      sheet.getRange(r, 1, 1, 3).merge().setValue("AKILLI ÖZET")
+        .setFontSize(13).setFontWeight("bold").setBackground("#dbeafe");
+      r++;
+      
+      if (sonuc.ozet.belgeler && sonuc.ozet.belgeler.length > 0) {
+        sonuc.ozet.belgeler.forEach(function(b) {
+          sheet.getRange(r, 1).setValue("📁 " + b.ad).setFontWeight("bold");
+          sheet.getRange(r, 2).setValue(b.tarih || "-");
+          sheet.getRange(r, 3).setValue((b.durum || "").toString().toUpperCase());
+          r++;
+        });
       }
+      if (sonuc.ozet.trafik && sonuc.ozet.trafik.toplamCeza > 0) {
+        sheet.getRange(r, 1).setValue("🚓 Trafik").setFontWeight("bold");
+        sheet.getRange(r, 2).setValue(sonuc.ozet.trafik.toplamCeza + " ceza");
+        sheet.getRange(r, 3).setValue("Ödenmemiş: " + sonuc.ozet.trafik.odenmemisTutar + " TL");
+        r++;
+      }
+      if (sonuc.ozet.servis && sonuc.ozet.servis.toplam > 0) {
+        sheet.getRange(r, 1).setValue("🔧 Servis").setFontWeight("bold");
+        sheet.getRange(r, 2).setValue(sonuc.ozet.servis.toplam + " kayıt");
+        sheet.getRange(r, 3).setValue(sonuc.ozet.servis.enSikNeden || "");
+        r++;
+      }
+      if (sonuc.ozet.km && sonuc.ozet.km.guncelKm) {
+        sheet.getRange(r, 1).setValue("⏲️ Güncel KM").setFontWeight("bold");
+        sheet.getRange(r, 2).setValue(sonuc.ozet.km.guncelKm + " km");
+        r++;
+      }
+      r++;
     }
-  }
-  
-  // 4. Personel Evrakları başlıkları
-  const pev = ss.getSheetByName("Personel Evrakları");
-  if (pev) {
-    const headers = pev.getRange(1, 1, 1, pev.getLastColumn()).getValues()[0];
-    Logger.log("=== PERSONEL EVRAK BAŞLIKLARI ===");
-    Logger.log(JSON.stringify(headers));
     
-    // AŞKIN ŞAHİN satırı
-    const data = pev.getRange(2, 1, pev.getLastRow() - 1, pev.getLastColumn()).getValues();
-    const adIdx = headers.indexOf("Ad Soyad");
-    for (let i = 0; i < data.length; i++) {
-      const a = (data[i][adIdx] || "").toString().trim().toUpperCase();
-      if (a === "AŞKIN ŞAHİN") {
-        Logger.log("=== PERSONEL EVRAK SATIRI - AŞKIN ŞAHİN ===");
-        Logger.log(JSON.stringify(data[i]));
-        break;
-      }
+    // BÖLÜMLER
+    if (sonuc.bolumler && sonuc.bolumler.length > 0) {
+      sonuc.bolumler.forEach(function(b) {
+        if (!b.kayitlar || b.kayitlar.length === 0) return;
+        
+        sheet.getRange(r, 1, 1, 3).merge()
+          .setValue(b.modul.toUpperCase() + " (" + b.toplam + " kayıt)")
+          .setFontSize(13).setFontWeight("bold").setBackground("#e0e7ff");
+        r++;
+        
+        b.kayitlar.forEach(function(k, idx) {
+          sheet.getRange(r, 1).setValue("#" + (idx + 1) + " - " + (k.tarih || "") + " " + (k.saat || ""))
+            .setFontWeight("bold").setBackground("#f3f4f6");
+          r++;
+          if (k.detaylar && k.detaylar.length > 0) {
+            k.detaylar.forEach(function(d) {
+              sheet.getRange(r, 1).setValue(d.label).setFontWeight("bold");
+              sheet.getRange(r, 2, 1, 2).merge().setValue(d.deger);
+              r++;
+            });
+          }
+          r++;
+        });
+      });
     }
-  }
-  
-  // 5. PERSONEL - Trafik Cezaları İçeriği
-  const persSonuc = sicilKartiGetir("personel", "AŞKIN ŞAHİN");
-  const trafikP = persSonuc.bolumler.find(function(b) { return b.modul === "Trafik Cezaları"; });
-  if (trafikP && trafikP.kayitlar[0]) {
-    Logger.log("=== TRAFİK KAYIT 1 - PERSONEL ===");
-    Logger.log(JSON.stringify(trafikP.kayitlar[0], null, 2));
-  }
-}
-function envanterTeshisOzet() {
-  const sonuc = sicilKartiGetir("arac", "34CIF093");
-  const envB = sonuc.bolumler.find(function(b) { return b.modul === "Envanter"; });
-  if (!envB) return Logger.log("Envanter bölümü yok");
-  
-  Logger.log("=== ENVANTER KAYIT SAYISI ===");
-  Logger.log(envB.kayitlar.length);
-  
-  envB.kayitlar.forEach(function(k, i) {
-    Logger.log("=== KAYIT " + (i + 1) + " ===");
-    Logger.log(JSON.stringify(k, null, 2));
-  });
-}
-function envanterTeshisDetay() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Saha Bildirimleri");
-  if (!sheet) return Logger.log("Sayfa yok");
-  
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  Logger.log("=== SAHA BİLDİRİMLERİ BAŞLIKLARI ===");
-  Logger.log(JSON.stringify(headers));
-  
-  // 34CIF093 ENVANTER kayıtları
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-  const headerMap = getHeaderMap(sheet);
-  const katIdx = headerMap["İşlem Kategorisi"];
-  const plakaIdx = headerMap["Plaka"];
-  
-  Logger.log("=== 34CIF093 ENVANTER KAYITLARI ===");
-  let sayac = 0;
-  for (let i = 0; i < data.length; i++) {
-    const kat = (data[i][katIdx] || "").toString().toUpperCase();
-    const plaka = (data[i][plakaIdx] || "").toString().trim();
-    if (kat.indexOf("ENVANTER") !== -1 && plaka === "34CIF093") {
-      Logger.log("KAYIT " + (++sayac) + ":");
-      Logger.log(JSON.stringify(data[i]));
-    }
-  }
-}
-function envanterTeshisDetay() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Saha Bildirimleri");
-  if (!sheet) return Logger.log("Sayfa yok");
-  
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  Logger.log("=== SAHA BİLDİRİMLERİ BAŞLIKLARI ===");
-  Logger.log(JSON.stringify(headers));
-  
-  // 34CIF093 ENVANTER kayıtları
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-  const headerMap = getHeaderMap(sheet);
-  const katIdx = headerMap["İşlem Kategorisi"];
-  const plakaIdx = headerMap["Plaka"];
-  
-  Logger.log("=== 34CIF093 ENVANTER KAYITLARI ===");
-  let sayac = 0;
-  for (let i = 0; i < data.length; i++) {
-    const kat = (data[i][katIdx] || "").toString().toUpperCase();
-    const plaka = (data[i][plakaIdx] || "").toString().trim();
-    if (kat.indexOf("ENVANTER") !== -1 && plaka === "34CIF093") {
-      Logger.log("KAYIT " + (++sayac) + ":");
-      Logger.log(JSON.stringify(data[i]));
-    }
-  }
-}
-function plakaEslesmeTeshis() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Saha Bildirimleri");
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const headerMap = getHeaderMap(sheet);
-  
-  // Plaka sütununu bul (esnek)
-  let plakaIdx;
-  ["Araç Plakası", "Plaka", "PLAKA"].forEach(function(n) {
-    if (plakaIdx === undefined && headerMap[n] !== undefined) plakaIdx = headerMap[n];
-  });
-  Logger.log("Plaka sütunu index: " + plakaIdx);
-  
-  const katIdx = headerMap["İşlem Kategorisi"];
-  Logger.log("Kategori sütunu index: " + katIdx);
-  
-  // İlk 5 envanter kayıdını HAM plaka değerleriyle yaz
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-  let sayac = 0;
-  Logger.log("=== İLK 5 ENVANTER KAYIT HAM PLAKA ===");
-  for (let i = 0; i < data.length && sayac < 5; i++) {
-    const kat = (data[i][katIdx] || "").toString().toUpperCase();
-    if (kat.indexOf("ENVANTER") !== -1) {
-      Logger.log("Satır " + (i + 2) + " | Plaka HAM: '" + data[i][plakaIdx] + "' | Kategori: '" + data[i][katIdx] + "'");
-      sayac++;
-    }
-  }
-}
-function envanterSayfaTeshis2() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Envanter");
-  if (!sheet) return Logger.log("Envanter sayfası yok");
-  
-  // Başlıklar
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  Logger.log("=== ENVANTER BAŞLIKLARI ===");
-  Logger.log(JSON.stringify(headers));
-  
-  // 34CIF093 satırlarını yaz
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-  const plakaIdx = 1; // B sütunu
-  
-  Logger.log("=== 34CIF093 SATIRLARI (HAM) ===");
-  for (let i = 0; i < data.length; i++) {
-    const plaka = (data[i][plakaIdx] || "").toString().trim().toUpperCase().replace(/\s/g, "");
-    if (plaka === "34CIF093") {
-      Logger.log("Satır " + (i + 2) + ":");
-      Logger.log(JSON.stringify(data[i]));
-    }
-  }
-}
-function headerMapTeshis() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Saha Bildirimleri");
-  const headerMap = getHeaderMap(sheet);
-  
-  // Test edilecek başlıklar
-  const testler = [
-    "5. Zimmet İşlem Türü",
-    "16. Eksik Envanter Kalemleri",
-    "21. Tutanak Tutuldu Mu?",
-    "31. Yönetici Onay Durumu",
-    "3. Araç Plakası",
-    "4. İşlem Kategorisi"
-  ];
-  
-  Logger.log("=== HEADER MAP TEST ===");
-  testler.forEach(function(t) {
-    const idx = headerMap[t];
-    Logger.log("'" + t + "' → " + (idx === undefined ? "BULUNAMADI ❌" : "index " + idx + " ✅"));
-  });
-}
-function kmDetayTeshis() {
-  const sonuc = sicilKartiGetir("arac", "34CIF093");
-  const kmB = sonuc.bolumler.find(function(b) { return b.modul === "Km Bilgisi"; });
-  if (!kmB) return Logger.log("Km Bilgisi yok");
-  Logger.log("Kayıt sayısı: " + kmB.kayitlar.length);
-  if (kmB.kayitlar[0]) {
-    Logger.log("=== DETAY LABELLER ===");
-    kmB.kayitlar[0].detaylar.forEach(function(d) {
-      Logger.log("label: '" + d.label + "' | deger: '" + d.deger + "'");
-    });
-  }
-}
-function servisYapiTeshis() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. Servis sayfası var mı?
-  const servisSayfa = ss.getSheetByName("Servis") || ss.getSheetByName("Servis Kayıt");
-  if (servisSayfa) {
-    const h = servisSayfa.getRange(1, 1, 1, servisSayfa.getLastColumn()).getValues()[0];
-    Logger.log("=== SERVİS SAYFASI BAŞLIKLARI ===");
-    Logger.log(JSON.stringify(h));
-    Logger.log("Sayfa adı: " + servisSayfa.getName());
-    Logger.log("Toplam satır: " + servisSayfa.getLastRow());
-  } else {
-    Logger.log("Servis sayfası yok (Saha Bildirimleri'nden çekiliyor)");
-  }
-  
-  // 2. 34CIF093 servis kayıtları
-  const sonuc = sicilKartiGetir("arac", "34CIF093");
-  const sB = sonuc.bolumler.find(function(b) { return b.modul === "Servis Kayıt"; });
-  if (sB && sB.kayitlar[0]) {
-    Logger.log("=== ÖRNEK SERVİS KAYIT ===");
-    Logger.log(JSON.stringify(sB.kayitlar[0], null, 2));
-  }
-  
-  // 3. Saha Bildirimleri'nden SERVİS kayıtları (ilk 2)
-  const sb = ss.getSheetByName("Saha Bildirimleri");
-  if (sb) {
-    const headers = sb.getRange(1, 1, 1, sb.getLastColumn()).getValues()[0];
-    const data = sb.getRange(2, 1, sb.getLastRow() - 1, sb.getLastColumn()).getValues();
-    const katIdx = 3; // D sütunu
-    let say = 0;
-    for (let i = 0; i < data.length && say < 2; i++) {
-      const kat = (data[i][katIdx] || "").toString().toUpperCase();
-      if (kat.indexOf("SERVİS") !== -1 || kat.indexOf("SERVIS") !== -1) {
-        Logger.log("=== SAHA SERVİS KAYIT " + (++say) + " ===");
-        for (let j = 0; j < headers.length; j++) {
-          if (data[i][j]) Logger.log(headers[j] + ": " + data[i][j]);
-        }
-      }
-    }
-  }
-}
-function servisMedyaTeshis() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("servis kayıt");
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const medyaIdx = headers.findIndex(function(h) { return h.indexOf("Medya") !== -1; });
-  
-  Logger.log("Medya sütun index: " + medyaIdx);
-  
-  // İlk 3 dolu medya kaydını yaz
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-  let sayac = 0;
-  for (let i = 0; i < data.length && sayac < 3; i++) {
-    if (data[i][medyaIdx]) {
-      Logger.log("=== KAYIT " + (++sayac) + " ===");
-      Logger.log("Plaka: " + data[i][1]);
-      Logger.log("Medya HAM: " + data[i][medyaIdx]);
-    }
+    
+    sheet.setColumnWidth(1, 180);
+    sheet.setColumnWidth(2, 280);
+    sheet.setColumnWidth(3, 200);
+    
+    DriveApp.getFileById(ss.getId()).setSharing(
+      DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW
+    );
+    
+    return {
+      basarili: true,
+      url: "https://docs.google.com/spreadsheets/d/" + ss.getId() + "/export?format=xlsx",
+      dosyaAd: dosyaAd + ".xlsx"
+    };
+    
+  } catch (e) {
+    logYaz("HATA", "sicilExcelOlustur", e.message);
+    return { basarili: false, mesaj: e.message };
   }
 }
