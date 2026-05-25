@@ -95,8 +95,8 @@ function ayarlariUygula(ayarlar) {
   doldur("s-Neden", "Servise Gidiş Nedeni",    "Seçiniz...");
 
   // Linkler
-  if (ayarlar["Online Linkler"]) {
-    linkleriYukle(ayarlar["Online Linkler"]);
+  if (ayarlar["Online Evrak ve Form Linkleri"]) {
+    linkleriYukle(ayarlar["Online Evrak ve Form Linkleri"]);
   }
 }
 
@@ -2531,5 +2531,80 @@ function sicilYenile() {
     btn.innerHTML = eskiYazi;
     btn.disabled = false;
   }, 1500);
+}
+// === EVRAK YÜKLE (AŞAMA F) ===
+function evrakYukleGonder() {
+  var btn = document.getElementById("ev-Btn");
+  var bilgi = document.getElementById("ev-Bilgi");
+  var tipi = document.getElementById("ev-Tipi").value;
+  var dosyaInput = document.getElementById("ev-Dosya");
+  
+  if (!tipi) return gUyari("HATA", "Lütfen evrak tipi seçiniz.");
+  if (!dosyaInput.files.length) return gUyari("HATA", "Lütfen dosya seçiniz.");
+  
+  var plaka = "";
+  if (typeof aktifAracKunyesi !== 'undefined' && aktifAracKunyesi && aktifAracKunyesi.plaka) {
+    plaka = aktifAracKunyesi.plaka;
+  }
+  if (!plaka) {
+    var pSel = document.getElementById("pSelect");
+    if (pSel) plaka = pSel.value || "";
+  }
+  if (!plaka) return gUyari("HATA", "Plaka bulunamadı. Lütfen önce plaka seçin.");
+  
+  var dosya = dosyaInput.files[0];
+  var maxBoyut = 10 * 1024 * 1024; // 10 MB
+  if (dosya.size > maxBoyut) return gUyari("HATA", "Dosya 10 MB'dan büyük olamaz.");
+  
+  var uzanti = dosya.name.split(".").pop().toLowerCase();
+  var mimeType = dosya.type || "application/pdf";
+  
+  // UI kilitle
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Yükleniyor...";
+  bilgi.style.display = "block";
+  bilgi.style.background = "#1e3a5f";
+  bilgi.style.color = "#fde68a";
+  bilgi.innerText = "Dosya yükleniyor, bekleyin...";
+  
+  // Dosyayı base64'e çevir
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(",")[1];
+    
+    google.script.run
+      .withSuccessHandler(function(sonuc) {
+        btn.disabled = false;
+        btn.innerHTML = "📤 EVRAKI YÜKLE";
+        if (sonuc && sonuc.basarili) {
+          bilgi.style.background = "#064e3b";
+          bilgi.style.color = "#86efac";
+          bilgi.innerText = "✅ " + sonuc.mesaj;
+          // Formu temizle
+          document.getElementById("ev-Tipi").value = "";
+          document.getElementById("ev-Dosya").value = "";
+          // 3 saniye sonra bilgi yazısı silinsin
+          setTimeout(function() { bilgi.style.display = "none"; }, 5000);
+        } else {
+          bilgi.style.background = "#7f1d1d";
+          bilgi.style.color = "#fecaca";
+          bilgi.innerText = "🔴 HATA: " + (sonuc && sonuc.mesaj ? sonuc.mesaj : "Bilinmeyen hata");
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = "📤 EVRAKI YÜKLE";
+        bilgi.style.background = "#7f1d1d";
+        bilgi.style.color = "#fecaca";
+        bilgi.innerText = "🔴 Sunucu hatası: " + err.message;
+      })
+      .evrakYukleAkilli(plaka, tipi, base64, uzanti, mimeType);
+  };
+  reader.onerror = function() {
+    btn.disabled = false;
+    btn.innerHTML = "📤 EVRAKI YÜKLE";
+    gUyari("HATA", "Dosya okunamadı.");
+  };
+  reader.readAsDataURL(dosya);
 }
 </script>

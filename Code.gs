@@ -286,15 +286,11 @@ function getAyarlar() {
     const cache = CacheService.getScriptCache();
     const cacheKey = "ayarlar_v" + CONFIG.VERSION;
     const cached = cache.get(cacheKey);
-    
-    if (cached) {
-      return JSON.parse(cached);
-    }
+    if (cached) return JSON.parse(cached);
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.SHEET.AYARLAR);
     const ayarlarObj = {};
-    
     if (!sheet) {
       logYaz("HATA", "getAyarlar", "Ayarlar sayfası bulunamadı");
       return ayarlarObj;
@@ -303,22 +299,18 @@ function getAyarlar() {
     const data = sheet.getDataRange().getValues();
     if (data.length < 2) return ayarlarObj;
     
-    // Header'ları normalize et
     const headers = data[0].map(h => h ? h.toString().toLowerCase().trim() : "");
-    
-    // Sütun indekslerini dinamik bul
-    let plakaIdx = -1, altBaslikIdx = -1, bolumIdx = -1;
+    let plakaIdx = -1, altBaslikIdx = -1, bolumIdx = -1, detayIdx = -1;
     
     for (let c = 0; c < headers.length; c++) {
       const h = headers[c];
       if (plakaIdx === -1 && (h === "araç plakası" || h === "arac plakasi" || h.indexOf("plaka") !== -1)) plakaIdx = c;
       if (altBaslikIdx === -1 && (h === "alt başlık" || h === "alt baslik")) altBaslikIdx = c;
       if (bolumIdx === -1 && (h === "alt başlık bölümleri" || h === "alt baslik bolumleri")) bolumIdx = c;
+      if (detayIdx === -1 && (h === "alt başlık detayı" || h === "alt baslik detayi")) detayIdx = c;
     }
     
-    // Verileri grupla
     for (let r = 1; r < data.length; r++) {
-      // Plakalar
       if (plakaIdx !== -1) {
         const plaka = data[r][plakaIdx] ? data[r][plakaIdx].toString().trim() : "";
         if (plaka !== "") {
@@ -329,23 +321,21 @@ function getAyarlar() {
         }
       }
       
-      // Kategori bazlı şıklar
       if (altBaslikIdx !== -1 && bolumIdx !== -1) {
         const kategori = data[r][altBaslikIdx] ? data[r][altBaslikIdx].toString().trim() : "";
         const secenek = data[r][bolumIdx] ? data[r][bolumIdx].toString().trim() : "";
-        
+        const detay = (detayIdx !== -1 && data[r][detayIdx]) ? data[r][detayIdx].toString().trim() : "";
+        const tamSecenek = (detay.indexOf("http") === 0) ? (secenek + "|" + detay) : secenek;
         if (kategori !== "" && secenek !== "") {
           if (!ayarlarObj[kategori]) ayarlarObj[kategori] = [];
-          if (ayarlarObj[kategori].indexOf(secenek) === -1) {
-            ayarlarObj[kategori].push(secenek);
+          if (ayarlarObj[kategori].indexOf(tamSecenek) === -1) {
+            ayarlarObj[kategori].push(tamSecenek);
           }
         }
       }
     }
     
-    // Cache'e koy
     cache.put(cacheKey, JSON.stringify(ayarlarObj), CONFIG.CACHE_SURE);
-    
     return ayarlarObj;
     
   } catch (e) {
@@ -3100,7 +3090,18 @@ function gunFarkHesapla(tarih) {
         if (!hucre) return;
         if (hucre !== degerNormal) return;
         
-        const tObj = tarihIdx !== undefined ? row[tarihIdx] : null;
+        // AŞAMA F: tarih boşsa alternatif sütunları dene
+        let tObj = tarihIdx !== undefined ? row[tarihIdx] : null;
+        if (!(tObj instanceof Date)) {
+          const altTarihler = ["Son Kontrol Tarihi", "Olay Tarihi ve Saati", "Servis Giriş Tarihi ve Saati", "Bildirim Tarihi", "Tarih / Saat", "TARİH", "Tarih"];
+          for (let ai = 0; ai < altTarihler.length; ai++) {
+            const altIdx = headerMap[altTarihler[ai]];
+            if (altIdx !== undefined && row[altIdx] instanceof Date) {
+              tObj = row[altIdx];
+              break;
+            }
+          }
+        }
         const tarih = (tObj instanceof Date) ? 
           Utilities.formatDate(tObj, "Europe/Istanbul", "dd.MM.yyyy") : "";
         const saat = (tObj instanceof Date) ? 
@@ -4401,4 +4402,175 @@ function oncekiAyKMGetir(plaka) {
 function kmTesti() {
   const sonuc = oncekiAyKMGetir("34CIF093");
   Logger.log("Önceki ay KM: " + sonuc);
+}
+function envanterTarihTeshis() {
+  const sonuc = sicilKartiGetir("arac", "34CIF093");
+  const env = sonuc.bolumler.find(function(b){ return b.modul === "Envanter"; });
+  if (!env) { Logger.log("Envanter bölümü yok"); return; }
+  Logger.log("=== ENVANTER İLK 2 KAYIT ===");
+  Logger.log("Kayıt 1: tarih='" + (env.kayitlar[0].tarih || "BOŞ") + "' saat='" + (env.kayitlar[0].saat || "BOŞ") + "'");
+  if (env.kayitlar[1]) Logger.log("Kayıt 2: tarih='" + (env.kayitlar[1].tarih || "BOŞ") + "' saat='" + (env.kayitlar[1].saat || "BOŞ") + "'");
+}
+/**
+ * AŞAMA F — EVRAK YÜKLEME (Yönetici)
+ * Plaka + Evrak Tipi'ne göre doğru klasöre yükler.
+ * Yıllık yenilenen evraklar için: eski Aktif → Arşiv'e taşınır, yeni Aktif'e konur.
+ * 
+ * evrakTipi: "Trafik Poliçesi", "Kasko Poliçesi", "Muayene", "Egzoz Emisyon",
+ *            "Ruhsat", "Personel Evrakları", "Zimmet Tutanağı", "Genel Evrak"
+ */
+function evrakYukleAkilli(plaka, evrakTipi, base64, dosyaUzanti, mimeType) {
+  try {
+    if (!plaka || !evrakTipi || !base64) {
+      return { basarili: false, mesaj: "Plaka, evrak tipi veya dosya boş" };
+    }
+    
+    const plakaUst = plaka.toString().trim().toUpperCase().replace(/\s+/g, "");
+    const tarih = Utilities.formatDate(new Date(), "Europe/Istanbul", "dd.MM.yyyy");
+    const tarihDosya = Utilities.formatDate(new Date(), "Europe/Istanbul", "yyyyMMdd");
+    const uzanti = (dosyaUzanti || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    // Hedef klasör ve dosya adı belirleme
+    let hedefKlasor;
+    let dosyaAdi;
+    const aktifArsivEvraklar = ["Trafik Poliçesi", "Kasko Poliçesi", "Muayene", "Egzoz Emisyon"];
+    const yillikYenilenen = aktifArsivEvraklar.indexOf(evrakTipi) !== -1;
+    
+    if (evrakTipi === "Zimmet Tutanağı") {
+      // 04_ZIMMET / Aktif Zimmetler
+      const ana = DriveApp.getFolderById(CONFIG.DRIVE.ZIMMET_SICIL);
+      hedefKlasor = altKlasorBulVeyaAc(ana, "Aktif Zimmetler");
+      dosyaAdi = plakaUst + "_ZIMMET_" + tarihDosya + "." + uzanti;
+    } else {
+      // 05_EVRAK_KUTUPHANE / [Evrak Tipi]
+      const ana = DriveApp.getFolderById(CONFIG.DRIVE.EVRAK_KUTUPHANE);
+      let tipKlasor;
+      if (evrakTipi === "Trafik Poliçesi") tipKlasor = altKlasorBulVeyaAc(ana, "Trafik Poliçeleri");
+      else if (evrakTipi === "Kasko Poliçesi") tipKlasor = altKlasorBulVeyaAc(ana, "Kasko Poliçeleri");
+      else if (evrakTipi === "Muayene") tipKlasor = altKlasorBulVeyaAc(ana, "Muayeneler");
+      else if (evrakTipi === "Egzoz Emisyon") tipKlasor = altKlasorBulVeyaAc(ana, "Egzoz Emisyon");
+      else if (evrakTipi === "Ruhsat") tipKlasor = altKlasorBulVeyaAc(ana, "Ruhsatlar");
+      else if (evrakTipi === "Personel Evrakları") tipKlasor = altKlasorBulVeyaAc(ana, "Personel Evrakları");
+      else tipKlasor = altKlasorBulVeyaAc(ana, "Genel Evrak");
+      
+      if (yillikYenilenen) {
+        hedefKlasor = altKlasorBulVeyaAc(tipKlasor, "Aktif");
+        const arsivKlasor = altKlasorBulVeyaAc(tipKlasor, "Arşiv");
+        // Bu plakanın eski Aktif evraklarını Arşiv'e taşı
+        const eskiler = hedefKlasor.getFiles();
+        while (eskiler.hasNext()) {
+          const eski = eskiler.next();
+          if (eski.getName().toUpperCase().indexOf(plakaUst) === 0) {
+            eski.moveTo(arsivKlasor);
+          }
+        }
+      } else {
+        hedefKlasor = tipKlasor;
+      }
+      
+      const tipKisa = evrakTipi.toUpperCase().replace(/\s+/g, "-").replace(/Ç|Ğ|İ|Ö|Ş|Ü/g, function(c){
+        return {"Ç":"C","Ğ":"G","İ":"I","Ö":"O","Ş":"S","Ü":"U"}[c];
+      });
+      dosyaAdi = plakaUst + "_" + tipKisa + "_" + tarihDosya + "." + uzanti;
+    }
+    
+    // Yükle
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64),
+      mimeType || "application/pdf",
+      dosyaAdi
+    );
+    const dosya = hedefKlasor.createFile(blob);
+    dosya.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    logYaz("BASARI", "evrakYukleAkilli", plakaUst + " " + evrakTipi + " yüklendi: " + dosyaAdi);
+    
+    return {
+      basarili: true,
+      url: dosya.getUrl(),
+      dosyaAdi: dosyaAdi,
+      mesaj: "✅ Evrak başarıyla yüklendi: " + dosyaAdi
+    };
+    
+  } catch (e) {
+    logYaz("HATA", "evrakYukleAkilli", e.message);
+    return { basarili: false, mesaj: e.message };
+  }
+}
+function evrakTest() {
+  // 1x1 piksel PDF placeholder
+  const ufakPdf = "JVBERi0xLjQKJeLjz9MKMyAwIG9iag==";
+  const sonuc = evrakYukleAkilli("34TEST01", "Trafik Poliçesi", ufakPdf, "pdf", "application/pdf");
+  Logger.log(JSON.stringify(sonuc, null, 2));
+}
+function ayarlarTest() {
+  const a = getAyarlar();
+  Logger.log("Plaka sayısı: " + ((a["Araç Plakası"] && a["Araç Plakası"].length) || 0));
+  Logger.log("İlk plaka: " + (a["Araç Plakası"] && a["Araç Plakası"][0]));
+  Logger.log("Link sayısı: " + ((a["Online Evrak ve Form Linkleri"] && a["Online Evrak ve Form Linkleri"].length) || 0));
+}
+function ayarlarDirektOku() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Ayarlar");
+  if (!sheet) { Logger.log("AYARLAR SAYFASI YOK"); return; }
+  Logger.log("Satır sayısı: " + sheet.getLastRow());
+  Logger.log("Sütun sayısı: " + sheet.getLastColumn());
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  Logger.log("Başlıklar: " + JSON.stringify(headers));
+  if (sheet.getLastRow() >= 2) {
+    const ilkSatir = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
+    Logger.log("2. satır: " + JSON.stringify(ilkSatir));
+  }
+}
+function ayarlarSonTest() {
+  const cache = CacheService.getScriptCache();
+  cache.remove("ayarlar_v2.0.0");
+  Logger.log("Cache silindi");
+  
+  const sonuc = getAyarlar();
+  Logger.log("Plaka sayısı: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"].length : "yok"));
+  Logger.log("İlk plaka: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"][0] : "yok"));
+  Logger.log("Anahtarlar: " + Object.keys(sonuc).join(", "));
+}
+function ayarlarSonTest() {
+  const cache = CacheService.getScriptCache();
+  cache.remove("ayarlar_v2.0.0");
+  Logger.log("Cache silindi");
+  const sonuc = getAyarlar();
+  Logger.log("Plaka sayısı: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"].length : "yok"));
+  Logger.log("Anahtarlar: " + Object.keys(sonuc).join(", "));
+}
+function ayarlarHataYakala() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Ayarlar");
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0].map(h => h ? h.toString().toLowerCase().trim() : "");
+    
+    let plakaIdx = -1, altBaslikIdx = -1, bolumIdx = -1;
+    for (let c = 0; c < headers.length; c++) {
+      const h = headers[c];
+      if (plakaIdx === -1 && (h === "araç plakası" || h === "arac plakasi" || h.indexOf("plaka") !== -1)) plakaIdx = c;
+      if (altBaslikIdx === -1 && (h === "alt başlık" || h === "alt baslik")) altBaslikIdx = c;
+      if (bolumIdx === -1 && (h === "alt başlık bölümleri" || h === "alt baslik bolumleri")) bolumIdx = c;
+    }
+    Logger.log("plakaIdx: " + plakaIdx + " altBaslikIdx: " + altBaslikIdx + " bolumIdx: " + bolumIdx);
+    
+    const ayarlarObj = {};
+    for (let r = 1; r < data.length; r++) {
+      if (plakaIdx !== -1) {
+        const plaka = data[r][plakaIdx] ? data[r][plakaIdx].toString().trim() : "";
+        if (plaka !== "") {
+          if (!ayarlarObj["Araç Plakası"]) ayarlarObj["Araç Plakası"] = [];
+          if (ayarlarObj["Araç Plakası"].indexOf(plaka) === -1) {
+            ayarlarObj["Araç Plakası"].push(plaka);
+          }
+        }
+      }
+    }
+    Logger.log("Plaka sayısı: " + (ayarlarObj["Araç Plakası"] ? ayarlarObj["Araç Plakası"].length : 0));
+  } catch (e) {
+    Logger.log("HATA YAKALANDI: " + e.message);
+    Logger.log("Stack: " + e.stack);
+  }
 }

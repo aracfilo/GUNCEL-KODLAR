@@ -473,3 +473,43 @@
       
     </div>
   </div>
+  <!-- AŞAMA F — EVRAK YÜKLE MODAL -->
+<div id="evrakModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;justify-content:center;align-items:center;">
+  <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid rgba(16,185,129,0.5);border-radius:14px;padding:24px;width:90%;max-width:450px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="color:#86efac;margin:0;font-size:18px;">📎 Evrak Yükle</h3>
+      <button onclick="evrakModalKapat()" style="background:transparent;color:#94a3b8;border:none;font-size:24px;cursor:pointer;">×</button>
+    </div>
+    
+    <div style="margin-bottom:14px;">
+      <label style="display:block;color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:6px;">PLAKA / PERSONEL</label>
+      <div id="evrakPlakaGoster" style="background:#0f172a;color:#86efac;padding:10px 12px;border-radius:6px;border:1px solid #334155;font-weight:700;">-</div>
+    </div>
+    
+    <div style="margin-bottom:14px;">
+      <label style="display:block;color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:6px;">EVRAK TİPİ</label>
+      <select id="evrakTipiSec" style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px 12px;border-radius:6px;border:1px solid #10b981;font-weight:600;">
+        <option value="">— Seçiniz —</option>
+        <option value="Trafik Poliçesi">🚗 Trafik Poliçesi</option>
+        <option value="Kasko Poliçesi">🛡️ Kasko Poliçesi</option>
+        <option value="Muayene">🔍 Muayene</option>
+        <option value="Egzoz Emisyon">💨 Egzoz Emisyon</option>
+        <option value="Ruhsat">📑 Ruhsat</option>
+        <option value="Zimmet Tutanağı">📋 Zimmet Tutanağı</option>
+        <option value="Personel Evrakları">👤 Personel Evrakları</option>
+        <option value="Genel Evrak">📁 Genel Evrak</option>
+      </select>
+    </div>
+    
+    <div style="margin-bottom:14px;">
+      <label style="display:block;color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:6px;">DOSYA</label>
+      <input type="file" id="evrakDosya" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px 12px;border-radius:6px;border:1px solid #334155;">
+      <div style="font-size:11px;color:#64748b;margin-top:4px;">PDF, JPG, PNG kabul edilir.</div>
+    </div>
+    
+    <div id="evrakYuklemeBilgi" style="display:none;background:#1e3a5f;color:#fde68a;padding:10px;border-radius:6px;margin-bottom:14px;font-size:13px;text-align:center;"></div>
+    
+    <button id="evrakYukleBtn" onclick="evrakYukleGonder()" style="width:100%;background:#10b981;color:#fff;border:none;padding:14px;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;">📤 EVRAKI YÜKLE</button>
+  </div>
+</div>

@@ -640,15 +640,48 @@
 
   <!-- =============== LİNKLER =============== -->
   <div id="ekran-linkler" class="screen">
-    <div class="top-bar">
-      <button class="back-btn" onclick="ekranDegistir('ekran-saha')">⬅ GERİ DÖN</button>
-    </div>
-    <div id="aracKunyeLinkler"></div>
-    <div class="form-area">
-      <div class="form-group active">
-        <div id="linkler-listesi" style="display:flex; flex-direction:column; gap:12px;">
-          <div style="text-align:center; color:#64748b; font-weight:700; padding:20px;">Linkler yükleniyor...</div>
-        </div>
+  <div class="top-bar">
+    <button class="back-btn" onclick="ekranDegistir('ekran-saha')">← GERİ DÖN</button>
+  </div>
+  <div id="aracKunyeLinkler"></div>
+  <div class="form-area">
+    
+    <!-- ÜST: LİNKLER -->
+    <div class="form-group active">
+      <label class="f-label">🔗 ÖNEMLİ LİNKLER</label>
+      <div id="linkler-listesi" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="text-align:center; color:#64748b; font-weight:700; padding:20px;">Linkler yükleniyor...</div>
       </div>
     </div>
+    
+    <!-- ALT: EVRAK YÜKLE -->
+    <div class="form-group active" style="margin-top:20px;border-top:2px solid rgba(16,185,129,0.3);padding-top:20px;">
+      <label class="f-label">📎 EVRAK YÜKLE</label>
+      
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600;">EVRAK TİPİ</div>
+        <select id="ev-Tipi" class="f-input">
+          <option value="">— Seçiniz —</option>
+          <option value="Trafik Poliçesi">🚗 Trafik Poliçesi</option>
+          <option value="Kasko Poliçesi">🛡️ Kasko Poliçesi</option>
+          <option value="Muayene">🔍 Muayene</option>
+          <option value="Egzoz Emisyon">💨 Egzoz Emisyon</option>
+          <option value="Ruhsat">📑 Ruhsat</option>
+          <option value="Zimmet Tutanağı">📋 Zimmet Tutanağı</option>
+          <option value="Genel Evrak">📁 Genel Evrak</option>
+        </select>
+      </div>
+      
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600;">DOSYA</div>
+        <input type="file" id="ev-Dosya" accept=".pdf,.jpg,.jpeg,.png" class="f-input">
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">PDF, JPG, PNG kabul edilir.</div>
+      </div>
+      
+      <div id="ev-Bilgi" style="display:none;background:#1e3a5f;color:#fde68a;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px;text-align:center;"></div>
+      
+      <button class="submit-btn" id="ev-Btn" onclick="evrakYukleGonder()" style="background:#10b981;">📤 EVRAKI YÜKLE</button>
+    </div>
+    
   </div>
+</div>
