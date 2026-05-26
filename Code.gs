@@ -39,6 +39,7 @@ const CONFIG = {
     GUNLUK_SAHA: "Günlük Saha",
     ARAC_LISTESI: "Araç Listesi",
     ARAC_GUNLUK_BILGILER: "Araç Günlük Bilgiler",
+    ARAC_GENEL: "ARAÇLAR - GENEL BİLGİLER",
     ZIMMET: "Zimmet İşlemleri",
     GECICI: "Geçici Kullanım",
     GIYDIRME: "Giydirme",
@@ -4399,18 +4400,6 @@ function oncekiAyKMGetir(plaka) {
     return 0;
   }
 }
-function kmTesti() {
-  const sonuc = oncekiAyKMGetir("34CIF093");
-  Logger.log("Önceki ay KM: " + sonuc);
-}
-function envanterTarihTeshis() {
-  const sonuc = sicilKartiGetir("arac", "34CIF093");
-  const env = sonuc.bolumler.find(function(b){ return b.modul === "Envanter"; });
-  if (!env) { Logger.log("Envanter bölümü yok"); return; }
-  Logger.log("=== ENVANTER İLK 2 KAYIT ===");
-  Logger.log("Kayıt 1: tarih='" + (env.kayitlar[0].tarih || "BOŞ") + "' saat='" + (env.kayitlar[0].saat || "BOŞ") + "'");
-  if (env.kayitlar[1]) Logger.log("Kayıt 2: tarih='" + (env.kayitlar[1].tarih || "BOŞ") + "' saat='" + (env.kayitlar[1].saat || "BOŞ") + "'");
-}
 /**
  * AŞAMA F — EVRAK YÜKLEME (Yönetici)
  * Plaka + Evrak Tipi'ne göre doğru klasöre yükler.
@@ -4497,80 +4486,96 @@ function evrakYukleAkilli(plaka, evrakTipi, base64, dosyaUzanti, mimeType) {
     return { basarili: false, mesaj: e.message };
   }
 }
-function evrakTest() {
-  // 1x1 piksel PDF placeholder
-  const ufakPdf = "JVBERi0xLjQKJeLjz9MKMyAwIG9iag==";
-  const sonuc = evrakYukleAkilli("34TEST01", "Trafik Poliçesi", ufakPdf, "pdf", "application/pdf");
-  Logger.log(JSON.stringify(sonuc, null, 2));
-}
-function ayarlarTest() {
-  const a = getAyarlar();
-  Logger.log("Plaka sayısı: " + ((a["Araç Plakası"] && a["Araç Plakası"].length) || 0));
-  Logger.log("İlk plaka: " + (a["Araç Plakası"] && a["Araç Plakası"][0]));
-  Logger.log("Link sayısı: " + ((a["Online Evrak ve Form Linkleri"] && a["Online Evrak ve Form Linkleri"].length) || 0));
-}
-function ayarlarDirektOku() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Ayarlar");
-  if (!sheet) { Logger.log("AYARLAR SAYFASI YOK"); return; }
-  Logger.log("Satır sayısı: " + sheet.getLastRow());
-  Logger.log("Sütun sayısı: " + sheet.getLastColumn());
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  Logger.log("Başlıklar: " + JSON.stringify(headers));
-  if (sheet.getLastRow() >= 2) {
-    const ilkSatir = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
-    Logger.log("2. satır: " + JSON.stringify(ilkSatir));
-  }
-}
-function ayarlarSonTest() {
-  const cache = CacheService.getScriptCache();
-  cache.remove("ayarlar_v2.0.0");
-  Logger.log("Cache silindi");
-  
-  const sonuc = getAyarlar();
-  Logger.log("Plaka sayısı: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"].length : "yok"));
-  Logger.log("İlk plaka: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"][0] : "yok"));
-  Logger.log("Anahtarlar: " + Object.keys(sonuc).join(", "));
-}
-function ayarlarSonTest() {
-  const cache = CacheService.getScriptCache();
-  cache.remove("ayarlar_v2.0.0");
-  Logger.log("Cache silindi");
-  const sonuc = getAyarlar();
-  Logger.log("Plaka sayısı: " + (sonuc["Araç Plakası"] ? sonuc["Araç Plakası"].length : "yok"));
-  Logger.log("Anahtarlar: " + Object.keys(sonuc).join(", "));
-}
-function ayarlarHataYakala() {
+/**
+ * AŞAMA RAPORLAMA v3 — FİLO BİLGİSİ KARTI
+ * ARAÇLAR - GENEL BİLGİLER sheet'inden filo özet bilgisi üretir.
+ * Aktif araçlar (Durum = Aktif) baz alınır.
+ */
+function filoBilgisiGetir() {
   try {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "filoBilgisi_v" + CONFIG.VERSION;
+    const cached = cache.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Ayarlar");
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0].map(h => h ? h.toString().toLowerCase().trim() : "");
-    
-    let plakaIdx = -1, altBaslikIdx = -1, bolumIdx = -1;
-    for (let c = 0; c < headers.length; c++) {
-      const h = headers[c];
-      if (plakaIdx === -1 && (h === "araç plakası" || h === "arac plakasi" || h.indexOf("plaka") !== -1)) plakaIdx = c;
-      if (altBaslikIdx === -1 && (h === "alt başlık" || h === "alt baslik")) altBaslikIdx = c;
-      if (bolumIdx === -1 && (h === "alt başlık bölümleri" || h === "alt baslik bolumleri")) bolumIdx = c;
+    const sheet = ss.getSheetByName(CONFIG.SHEET.ARAC_GENEL);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { basarili: false, mesaj: "Sheet bulunamadı veya boş" };
     }
-    Logger.log("plakaIdx: " + plakaIdx + " altBaslikIdx: " + altBaslikIdx + " bolumIdx: " + bolumIdx);
     
-    const ayarlarObj = {};
-    for (let r = 1; r < data.length; r++) {
-      if (plakaIdx !== -1) {
-        const plaka = data[r][plakaIdx] ? data[r][plakaIdx].toString().trim() : "";
-        if (plaka !== "") {
-          if (!ayarlarObj["Araç Plakası"]) ayarlarObj["Araç Plakası"] = [];
-          if (ayarlarObj["Araç Plakası"].indexOf(plaka) === -1) {
-            ayarlarObj["Araç Plakası"].push(plaka);
-          }
+    const headerMap = getHeaderMap(sheet);
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+    
+    // Sütun indeksleri (esnek)
+    const idxPlaka = headerMap["Plaka"];
+    const idxMudurluk = headerMap["Müdürlük"];
+    const idxTip = headerMap["Araç Tipi"];
+    const idxModel = headerMap["Model"];
+    const idxYil = headerMap["Model Yili"] !== undefined ? headerMap["Model Yili"] : headerMap["Model Yılı"];
+    const idxDurum = headerMap["Durum (Aktif/Pasif)"] !== undefined ? headerMap["Durum (Aktif/Pasif)"] : headerMap["Durum"];
+    
+    let toplamAktif = 0;
+    const mudurlukSayim = {};
+    const tipSayim = {};
+    const modelSayim = {};
+    const yilSayim = { "2015 ve oncesi": 0, "2016-2019": 0, "2020-2022": 0, "2023+": 0 };
+    
+    data.forEach(function(row) {
+      // Aktif kontrol
+      const durum = (idxDurum !== undefined && row[idxDurum]) ? row[idxDurum].toString().trim().toLowerCase() : "";
+      if (durum && durum.indexOf("pasif") !== -1) return; // pasifse geç
+      
+      toplamAktif++;
+      
+      // Müdürlük
+      if (idxMudurluk !== undefined && row[idxMudurluk]) {
+        const m = row[idxMudurluk].toString().trim();
+        if (m) mudurlukSayim[m] = (mudurlukSayim[m] || 0) + 1;
+      }
+      
+      // Araç tipi
+      if (idxTip !== undefined && row[idxTip]) {
+        const t = row[idxTip].toString().trim();
+        if (t) tipSayim[t] = (tipSayim[t] || 0) + 1;
+      }
+      
+      // Model
+      if (idxModel !== undefined && row[idxModel]) {
+        const md = row[idxModel].toString().trim();
+        if (md) modelSayim[md] = (modelSayim[md] || 0) + 1;
+      }
+      
+      // Yıl aralığı
+      if (idxYil !== undefined && row[idxYil]) {
+        const yil = parseInt(row[idxYil]);
+        if (!isNaN(yil)) {
+          if (yil <= 2015) yilSayim["2015 ve oncesi"]++;
+          else if (yil <= 2019) yilSayim["2016-2019"]++;
+          else if (yil <= 2022) yilSayim["2020-2022"]++;
+          else yilSayim["2023+"]++;
         }
       }
-    }
-    Logger.log("Plaka sayısı: " + (ayarlarObj["Araç Plakası"] ? ayarlarObj["Araç Plakası"].length : 0));
+    });
+    
+    const sonuc = {
+      basarili: true,
+      toplamAktif: toplamAktif,
+      mudurluk: mudurlukSayim,
+      tip: tipSayim,
+      model: modelSayim,
+      yil: yilSayim
+    };
+    
+    cache.put(cacheKey, JSON.stringify(sonuc), 3600); // 1 saat cache
+    return sonuc;
+    
   } catch (e) {
-    Logger.log("HATA YAKALANDI: " + e.message);
-    Logger.log("Stack: " + e.stack);
+    logYaz("HATA", "filoBilgisiGetir", e.message);
+    return { basarili: false, mesaj: e.message };
   }
+}
+function rv3GunlukTest() {
+  const sonuc = gunlukDurumGetir();
+  Logger.log(JSON.stringify(sonuc, null, 2));
 }

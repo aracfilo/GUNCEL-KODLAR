@@ -211,7 +211,7 @@
 
   <!-- =============== YÖNETİCİ PANEL =============== -->
   <!-- Operasyonel alan: Yardımcılar + Admin görür -->
-  <div id="ekran-yonetici-panel" class="screen">
+  <<div id="ekran-yonetici-panel" class="screen">
     <div class="top-bar">
       <button class="back-btn" onclick="cikisYap()">⬅ ÇIKIŞ</button>
     </div>
@@ -225,6 +225,7 @@
           </div>
         </div>
         <div class="y-baslik-rozet" id="aktifYoneticiRol">—</div>
+        <button onclick="ekranDegistir('ekran-yonetim-v3')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-left:10px;box-shadow:0 2px 8px rgba(16,185,129,0.4);">✨ YENİ MERKEZİ GÖR</button>
       </div>
 
       <!-- === AŞAMA B2: GÜNLÜK ARAÇ DURUMU === -->
@@ -236,7 +237,7 @@
         </div>
         <div class="gunluk-durum-grid" id="ym-gunlukGrid">
           <div class="gunluk-durum-yukleniyor">⏳ Yükleniyor...</div>
-        </div>
+        </div>>
       </div>
 
       <!-- === ACİL DURUMLAR (kırmızı kutu - Açılır-Kapanır) === -->
@@ -300,6 +301,132 @@
         <span id="ym-sonGuncelleme">Veriler henüz yüklenmedi</span>
         <button class="y-yenile-btn" onclick="yonetimYenile()">🔄 Yenile</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ============ YÖNETİM MERKEZİ v3 İSKELET (Sprint 1) ========= -->
+  <!-- ============================================================ -->
+  <div id="ekran-yonetim-v3" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-yonetici-panel')">⬅ ESKİ PANEL</button>
+      <button class="back-btn" onclick="cikisYap()" style="margin-left:8px;background:#7f1d1d;">⬅ ÇIKIŞ</button>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1600px;margin:0 auto;">
+      
+      <!-- === SOL ANA İÇERİK === -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        
+        <!-- KATMAN 1: ACİL EYLEM BANDI -->
+        <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid #ef4444;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(239,68,68,0.3);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:24px;">🚨</span>
+            <h2 style="color:#fef2f2;margin:0;font-size:18px;font-weight:800;letter-spacing:0.5px;">BUGÜN HEMEN İLGİLEN</h2>
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;color:#fecaca;font-size:14px;line-height:2;">
+            <li>▸ <strong>3 ACİL DURUM</strong> beklemekte</li>
+            <li>▸ <strong>12 BEKLEYEN ONAY</strong> var (en eskisi 2 gün önce)</li>
+            <li>▸ <strong>5 araç</strong> Muayene veya Bakım'a 30 gün içinde yaklaşıyor</li>
+            <li>▸ <strong>2 araçta KRİTİK ENVANTER EKSİĞİ</strong> (Stepne, Kart Okuyucu)</li>
+            <li>▸ <strong>7 araçta</strong> Periyodik bildirim gecikmiş (30+ gün)</li>
+          </ul>
+        </div>
+        
+        <!-- KATMAN 2: 3 ANA WIDGET -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+          
+          <!-- ONAY widget -->
+          <div style="background:linear-gradient(135deg,#1e3a8a,#0c1e4a);border:2px solid #3b82f6;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Onaya Git')">
+            <div style="font-size:14px;color:#93c5fd;font-weight:700;letter-spacing:1px;">📋 ONAY</div>
+            <div style="font-size:42px;color:#dbeafe;font-weight:800;margin:8px 0;">12</div>
+            <div style="font-size:12px;color:#93c5fd;">3 yeni · 9 eski</div>
+            <div style="margin-top:10px;font-size:12px;color:#60a5fa;font-weight:600;">→ Onaya Git</div>
+          </div>
+          
+          <!-- SERVİSTE widget -->
+          <div style="background:linear-gradient(135deg,#78350f,#451a03);border:2px solid #f59e0b;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Serviste Liste')">
+            <div style="font-size:14px;color:#fde68a;font-weight:700;letter-spacing:1px;">🔧 SERVİSTE</div>
+            <div style="font-size:42px;color:#fef3c7;font-weight:800;margin:8px 0;">5</div>
+            <div style="font-size:12px;color:#fde68a;">2'si 7+ gün</div>
+            <div style="margin-top:10px;font-size:12px;color:#fbbf24;font-weight:600;">→ Liste</div>
+          </div>
+          
+          <!-- ACİL widget -->
+          <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid #ef4444;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Acil Detay')">
+            <div style="font-size:14px;color:#fecaca;font-weight:700;letter-spacing:1px;">🚨 ACİL</div>
+            <div style="font-size:42px;color:#fef2f2;font-weight:800;margin:8px 0;">3</div>
+            <div style="font-size:12px;color:#fecaca;">1 yeni · 2 takip</div>
+            <div style="margin-top:10px;font-size:12px;color:#f87171;font-weight:600;">→ Detay</div>
+          </div>
+          
+        </div>
+        
+        <!-- KATMAN 3: AKILLI UYARILAR -->
+        <div style="background:linear-gradient(135deg,#78350f,#451a03);border:2px solid #fbbf24;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(251,191,36,0.2);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:22px;">⚠️</span>
+            <h2 style="color:#fef3c7;margin:0;font-size:17px;font-weight:800;">AKILLI UYARILAR <span style="font-size:11px;font-weight:500;color:#fde68a;">(sistem öneriyor)</span></h2>
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;color:#fde68a;font-size:13px;line-height:1.9;">
+            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34CIF093</strong> — Muayene 22 gün sonra (12.06.2026)</li>
+            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34DCV447</strong> — Sigorta yenileme zamanı (15 gün)</li>
+            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>Güney Meral</strong> — Son 30 günde 5 araç kullanmış ⚠️</li>
+            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34TEST01</strong> — Periyodik bildirim 45 gündür yok</li>
+            <li style="cursor:pointer;padding:6px 0;background:rgba(16,185,129,0.1);border-radius:6px;margin-top:6px;padding-left:8px;">📲 <strong>KM bildirmeyenler:</strong> 3 araç <button style="background:#10b981;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">Hatırlatma Mesajı Hazırla</button></li>
+          </ul>
+          <div style="text-align:right;margin-top:10px;color:#fbbf24;font-size:12px;font-weight:600;cursor:pointer;">→ Tümünü gör</div>
+        </div>
+        
+        <!-- KATMAN 4: SAHADAN SON 5 BİLDİRİM -->
+        <div style="background:linear-gradient(135deg,#4c1d95,#2e1065);border:2px solid #a855f7;border-radius:14px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:22px;">📜</span>
+            <h2 style="color:#e9d5ff;margin:0;font-size:17px;font-weight:800;">SAHADAN SON 5 BİLDİRİM</h2>
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;color:#ddd6fe;font-size:13px;">
+            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">14:25</span> · <strong>Güney Meral</strong> · 34CIF093 · KM: 12.500</li>
+            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">14:10</span> · <strong>Aşkın Şahin</strong> · 34DCV447 · Kaza/Hasar (Hafif, Tutanak: Var)</li>
+            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">13:45</span> · <strong>Sevda Y</strong> · 34TEST01 · Geçici alma (Kimden: Murat T)</li>
+            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">13:30</span> · <strong>Ahmet K</strong> · 34DPV801 · Envanter eksik (Stepne)</li>
+            <li style="padding:8px 0;">👤 <span style="color:#c4b5fd;">13:15</span> · <strong>Murat T</strong> · 34ABC123 · Servis çıkışı (Aldı: Aşkın Şahin)</li>
+          </ul>
+          <div style="text-align:right;margin-top:10px;color:#c084fc;font-size:12px;font-weight:600;cursor:pointer;">→ Tüm saha akışı</div>
+        </div>
+        
+      </div>
+      
+      <!-- === SAĞ STICKY SIDEBAR === -->
+      <div style="position:sticky;top:16px;align-self:flex-start;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 32px);overflow-y:auto;">
+        
+        <!-- Hızlı Erişim -->
+        <div style="background:linear-gradient(135deg,#064e3b,#022c22);border:2px solid #10b981;border-radius:14px;padding:14px;">
+          <div style="color:#86efac;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">⚡ HIZLI ERİŞİM</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📊 Raporlama</button>
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📋 Sicil Kartı</button>
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📎 Evrak Yükle</button>
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">⚙️ Ayarlar</button>
+          </div>
+        </div>
+        
+        <!-- Sheet Bağlantıları -->
+        <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:14px;">
+          <div style="color:#cbd5e1;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">📑 SHEET BAĞLANTILARI</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📊 Ana Sheet</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📝 Saha Bildirimleri</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">⏳ Bekleyen Onaylar</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🚓 Trafik Cezaları</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🔧 Servis Kayıt</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📦 Envanter</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🛠️ Bakım Genel</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🪪 Personel Evrakları</a>
+          </div>
+        </div>
+        
+      </div>
+      
     </div>
   </div>
 
@@ -370,9 +497,644 @@
       <div class="y-alt-bilgi">
         <span id="y-sonGuncelleme">Veriler henüz yüklenmedi</span>
         <button class="y-yenile-btn" onclick="dashboardYenile()">🔄 Verileri Yenile</button>
+        <button onclick="ekranDegistir('ekran-rapor-v3'); setTimeout(rv3VeriYukle, 100);" style="background:linear-gradient(135deg,#0066b3,#003d6b);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-left:10px;box-shadow:0 2px 8px rgba(0,102,179,0.4);">✨ YENİ RAPORLAMA GÖR</button>
       </div>
     </div>
   </div>
+
+  <!-- ============================================================ -->
+  <!-- ============ RAPORLAMA MERKEZİ v3 İSKELET (Sprint 1) ======== -->
+  <!-- ============================================================ -->
+  <div id="ekran-rapor-v3" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="ekranDegistir('ekran-rapor')">⬅ ESKİ RAPORLAMA</button>
+      <button class="back-btn" onclick="ekranDegistir('ekran-vitrin')" style="margin-left:8px;">🏠 VİTRİNE</button>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1700px;margin:0 auto;">
+      
+      <!-- === SOL ANA İÇERİK === -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        
+        <!-- BAŞLIK -->
+        <div style="background:linear-gradient(135deg,#1e40af,#0c1e4a);border:2px solid #3b82f6;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;">
+          <div style="font-size:32px;">📊</div>
+          <div style="flex:1;">
+            <div style="color:#dbeafe;font-size:18px;font-weight:800;letter-spacing:0.5px;">RAPORLAMA MERKEZİ</div>
+            <div style="color:#93c5fd;font-size:12px;">İstihbarat — Sonuçları gör, kararı al</div>
+          </div>
+          <button style="background:#f59e0b;color:#000;border:none;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;">📥 Excel İndir</button>
+        </div>
+        
+        <!-- SEKMELER -->
+        <div style="display:flex;gap:6px;border-bottom:2px solid #334155;padding-bottom:0;">
+          <button id="rv3-tab-1" onclick="rv3Sekme(1)" style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;border-bottom:3px solid #60a5fa;">📊 GENEL BAKIŞ</button>
+          <button id="rv3-tab-2" onclick="rv3Sekme(2)" style="background:#1e293b;color:#94a3b8;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;">🚗 ARAÇ SİCİLİ</button>
+          <button id="rv3-tab-3" onclick="rv3Sekme(3)" style="background:#1e293b;color:#94a3b8;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;">👤 PERSONEL SİCİLİ</button>
+          <button id="rv3-tab-4" onclick="rv3Sekme(4)" style="background:#1e293b;color:#94a3b8;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;position:relative;">🔍 AKILLI KARŞILAŞTIRMA <span style="background:#ef4444;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;margin-left:4px;">⭐ YENİ</span></button>
+        </div>
+        
+        <!-- SEKME 1: GENEL BAKIŞ -->
+        <div id="rv3-icerik-1">
+          
+          <!-- 1. BUGÜNKÜ ARAÇ DURUMU (en üst) -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:24px;">📊</span>
+                <h3 style="color:#e2e8f0;margin:0;font-size:16px;font-weight:800;">BUGÜNKÜ ARAÇ DURUMU</h3>
+              </div>
+              <span style="color:#94a3b8;font-size:12px;" id="rv3-bugun-tarih">—</span>
+            </div>
+            <div id="rv3-bugun-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;">
+              <div style="text-align:center;color:#64748b;padding:20px;grid-column:1/-1;">⏳ Yükleniyor...</div>
+            </div>
+          </div>
+          
+          <!-- 2. FİLO BİLGİSİ -->
+          <div style="background:linear-gradient(135deg,#1e3a8a,#0c1e4a);border:2px solid #3b82f6;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <span style="font-size:24px;">🚐</span>
+              <h3 style="color:#dbeafe;margin:0;font-size:16px;font-weight:800;">FİLO BİLGİSİ</h3>
+            </div>
+            <div id="rv3-filo-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+              <div style="text-align:center;color:#94a3b8;padding:20px;grid-column:1/-1;">⏳ Yükleniyor...</div>
+            </div>
+          </div>
+          
+          <!-- 3. ÇİZGİ GRAFİK + HEATMAP -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <h3 style="color:#e2e8f0;margin:0 0 14px 0;font-size:15px;font-weight:800;">📈 6 AY BİLDİRİM TRENDİ</h3>
+            <svg viewBox="0 0 600 80" style="width:100%;height:auto;max-height:120px;">
+              <polyline points="40,60 140,68 240,25 340,40 440,30 540,15" fill="none" stroke="#0066b3" stroke-width="3"/>
+              <circle cx="40" cy="60" r="4" fill="#0066b3"/>
+              <circle cx="140" cy="68" r="4" fill="#0066b3"/>
+              <circle cx="240" cy="25" r="4" fill="#0066b3"/>
+              <circle cx="340" cy="40" r="4" fill="#0066b3"/>
+              <circle cx="440" cy="30" r="4" fill="#0066b3"/>
+              <circle cx="540" cy="15" r="5" fill="#ffd700"/>
+            </svg>
+            <div style="display:flex;justify-content:space-around;color:#94a3b8;font-size:11px;margin-top:6px;">
+              <span>Aralık</span><span>Ocak</span><span>Şubat</span><span>Mart</span><span>Nisan</span><span>Mayıs</span>
+            </div>
+          </div>
+          
+          <!-- 4. HEATMAP -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <h3 style="color:#e2e8f0;margin:0 0 14px 0;font-size:15px;font-weight:800;">🔥 PROBLEMLİ PLAKA TESPİTİ</h3>
+            <table style="width:100%;border-collapse:collapse;color:#cbd5e1;font-size:13px;">
+              <thead>
+                <tr style="border-bottom:2px solid #334155;">
+                  <th style="text-align:left;padding:10px;color:#94a3b8;">Plaka</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Kaza</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Servis</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Envanter</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Trafik</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Periyodik</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid #1e293b;">
+                  <td style="padding:10px;font-weight:700;">34CIF093</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">2</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">3</td>
+                  <td style="text-align:center;padding:10px;color:#86efac;font-weight:700;">🟢 SAĞLAM</td>
+                </tr>
+                <tr style="border-bottom:1px solid #1e293b;">
+                  <td style="padding:10px;font-weight:700;">34DCV447</td>
+                  <td style="text-align:center;padding:10px;background:rgba(239,68,68,0.2);color:#fecaca;font-weight:700;">8</td>
+                  <td style="text-align:center;padding:10px;background:rgba(239,68,68,0.2);color:#fecaca;font-weight:700;">5</td>
+                  <td style="text-align:center;padding:10px;background:rgba(251,191,36,0.2);color:#fde68a;">3</td>
+                  <td style="text-align:center;padding:10px;background:rgba(251,191,36,0.2);color:#fde68a;">2</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;color:#fecaca;font-weight:700;">🔴 SORUNLU</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 5. KPI (EN ALTTA, KÜÇÜK) -->
+          <div style="background:linear-gradient(135deg,#0f172a,#020617);border:1px solid #334155;border-radius:12px;padding:14px;">
+            <div style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;text-align:center;">📋 BU AY ÖZET (Geçici Veri — Sprint 3'te bağlanacak)</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+              <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#86efac;font-size:10px;font-weight:700;">BU AY BİLDİRİM</div>
+                <div style="color:#d1fae5;font-size:18px;font-weight:800;margin-top:2px;">142</div>
+                <div style="color:#86efac;font-size:9px;">geçen ay 118 (+%20)</div>
+              </div>
+              <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#fecaca;font-size:10px;font-weight:700;">ACİL DURUM</div>
+                <div style="color:#fef2f2;font-size:18px;font-weight:800;margin-top:2px;">8</div>
+                <div style="color:#fecaca;font-size:9px;">3 yeni</div>
+              </div>
+              <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#fde68a;font-size:10px;font-weight:700;">SERVİSE GİREN</div>
+                <div style="color:#fef3c7;font-size:18px;font-weight:800;margin-top:2px;">5</div>
+                <div style="color:#fde68a;font-size:9px;">ort 4 gün</div>
+              </div>
+              <div style="background:rgba(168,85,247,0.1);border:1px solid #a855f7;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#e9d5ff;font-size:10px;font-weight:700;">EN SORUNLU</div>
+                <div style="color:#f3e8ff;font-size:16px;font-weight:800;margin-top:2px;">34DCV447</div>
+                <div style="color:#e9d5ff;font-size:9px;">8 kaza/yıl</div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        <div style="display:none;">
+          
+          <!-- ESKİ KPI ŞERİDİ (5 mini kart) -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
+            
+            <div style="background:linear-gradient(135deg,#064e3b,#022c22);border-left:4px solid #10b981;border-radius:10px;padding:14px;">
+              <div style="color:#86efac;font-size:11px;font-weight:700;letter-spacing:0.5px;">TOPLAM BİLDİRİM</div>
+              <div style="color:#d1fae5;font-size:28px;font-weight:800;margin:4px 0;">%85 ▲</div>
+              <div style="color:#86efac;font-size:11px;">+%15 geçen ay</div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg,#064e3b,#022c22);border-left:4px solid #10b981;border-radius:10px;padding:14px;">
+              <div style="color:#86efac;font-size:11px;font-weight:700;letter-spacing:0.5px;">ONAYLI ORAN</div>
+              <div style="color:#d1fae5;font-size:28px;font-weight:800;margin:4px 0;">%92 ▲</div>
+              <div style="color:#86efac;font-size:11px;">kaliteli kayıt</div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg,#064e3b,#022c22);border-left:4px solid #10b981;border-radius:10px;padding:14px;">
+              <div style="color:#86efac;font-size:11px;font-weight:700;letter-spacing:0.5px;">ACİL DURUM</div>
+              <div style="color:#d1fae5;font-size:28px;font-weight:800;margin:4px 0;">%12 ▼</div>
+              <div style="color:#86efac;font-size:11px;">azaldı (iyi)</div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg,#78350f,#451a03);border-left:4px solid #fbbf24;border-radius:10px;padding:14px;">
+              <div style="color:#fde68a;font-size:11px;font-weight:700;letter-spacing:0.5px;">SERVİS SÜRE</div>
+              <div style="color:#fef3c7;font-size:28px;font-weight:800;margin:4px 0;">%105 ▲</div>
+              <div style="color:#fde68a;font-size:11px;">uzadı (dikkat)</div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border-left:4px solid #ef4444;border-radius:10px;padding:14px;">
+              <div style="color:#fecaca;font-size:11px;font-weight:700;letter-spacing:0.5px;">ENVANTER TAM</div>
+              <div style="color:#fef2f2;font-size:28px;font-weight:800;margin:4px 0;">%78 ▼</div>
+              <div style="color:#fecaca;font-size:11px;">eksikler arttı 🔴</div>
+            </div>
+            
+          </div>
+          
+          <!-- BUGÜNKÜ ARAÇ DURUMU (eski yönetim merkezinden taşındı) -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:24px;">📊</span>
+                <h3 style="color:#e2e8f0;margin:0;font-size:16px;font-weight:800;">BUGÜNKÜ ARAÇ DURUMU</h3>
+              </div>
+              <span style="color:#94a3b8;font-size:12px;">25.05.2026</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;">
+              <div style="background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#86efac;">28</div>
+                <div style="font-size:11px;color:#86efac;margin-top:4px;">SAHADA</div>
+              </div>
+              <div style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#fde68a;">5</div>
+                <div style="font-size:11px;color:#fde68a;margin-top:4px;">SERVİSTE</div>
+              </div>
+              <div style="background:rgba(148,163,184,0.15);border:1px solid #64748b;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#cbd5e1;">7</div>
+                <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">BOŞTA</div>
+              </div>
+              <div style="background:rgba(168,85,247,0.15);border:1px solid #a855f7;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#e9d5ff;">2</div>
+                <div style="font-size:11px;color:#e9d5ff;margin-top:4px;">DIŞ GÖREV</div>
+              </div>
+              <div style="background:rgba(59,130,246,0.15);border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#dbeafe;">15</div>
+                <div style="font-size:11px;color:#dbeafe;margin-top:4px;">AVRUPA</div>
+              </div>
+              <div style="background:rgba(236,72,153,0.15);border:1px solid #ec4899;border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#fce7f3;">13</div>
+                <div style="font-size:11px;color:#fce7f3;margin-top:4px;">ANADOLU</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 2 GRAFİK -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            
+            <!-- Pasta -->
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;">
+              <h3 style="color:#e2e8f0;margin:0 0 14px 0;font-size:15px;font-weight:800;">🌍 BÖLGE DAĞILIMI</h3>
+              <div style="display:flex;align-items:center;gap:20px;">
+                <div style="width:120px;height:120px;border-radius:50%;background:conic-gradient(#3b82f6 0% 60%,#10b981 60% 100%);display:flex;align-items:center;justify-content:center;">
+                  <div style="width:60px;height:60px;background:#0f172a;border-radius:50%;"></div>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="width:14px;height:14px;background:#3b82f6;border-radius:3px;display:inline-block;"></span>
+                    <span style="color:#dbeafe;font-size:13px;">Avrupa <strong>%60</strong> (24 araç)</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:14px;height:14px;background:#10b981;border-radius:3px;display:inline-block;"></span>
+                    <span style="color:#d1fae5;font-size:13px;">Anadolu <strong>%40</strong> (18 araç)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Çizgi -->
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;">
+              <h3 style="color:#e2e8f0;margin:0 0 14px 0;font-size:15px;font-weight:800;">📈 6 AY BİLDİRİM TRENDİ</h3>
+              <svg viewBox="0 0 280 120" style="width:100%;height:auto;">
+                <polyline points="20,80 70,95 120,40 170,55 220,45 260,30" fill="none" stroke="#3b82f6" stroke-width="3"/>
+                <circle cx="20" cy="80" r="4" fill="#3b82f6"/>
+                <circle cx="70" cy="95" r="4" fill="#3b82f6"/>
+                <circle cx="120" cy="40" r="4" fill="#3b82f6"/>
+                <circle cx="170" cy="55" r="4" fill="#3b82f6"/>
+                <circle cx="220" cy="45" r="4" fill="#3b82f6"/>
+                <circle cx="260" cy="30" r="4" fill="#60a5fa"/>
+              </svg>
+              <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:10px;margin-top:6px;">
+                <span>Aralık</span><span>Ocak</span><span>Şubat</span><span>Mart</span><span>Nisan</span><span>Mayıs</span>
+              </div>
+            </div>
+            
+          </div>
+          
+          <!-- HEATMAP -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;">
+            <h3 style="color:#e2e8f0;margin:0 0 14px 0;font-size:15px;font-weight:800;">🔥 PROBLEMLİ PLAKA TESPİTİ</h3>
+            <table style="width:100%;border-collapse:collapse;color:#cbd5e1;font-size:13px;">
+              <thead>
+                <tr style="border-bottom:2px solid #334155;">
+                  <th style="text-align:left;padding:10px;color:#94a3b8;">Plaka</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Kaza</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Servis</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Envanter</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Trafik</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Periyodik</th>
+                  <th style="text-align:center;padding:10px;color:#94a3b8;">Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid #1e293b;">
+                  <td style="padding:10px;font-weight:700;">34CIF093</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">2</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">3</td>
+                  <td style="text-align:center;padding:10px;color:#86efac;font-weight:700;">🟢 SAĞLAM</td>
+                </tr>
+                <tr style="border-bottom:1px solid #1e293b;">
+                  <td style="padding:10px;font-weight:700;">34DCV447</td>
+                  <td style="text-align:center;padding:10px;background:rgba(239,68,68,0.2);color:#fecaca;font-weight:700;">8</td>
+                  <td style="text-align:center;padding:10px;background:rgba(239,68,68,0.2);color:#fecaca;font-weight:700;">5</td>
+                  <td style="text-align:center;padding:10px;background:rgba(251,191,36,0.2);color:#fde68a;">3</td>
+                  <td style="text-align:center;padding:10px;background:rgba(251,191,36,0.2);color:#fde68a;">2</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;color:#fecaca;font-weight:700;">🔴 SORUNLU</td>
+                </tr>
+                <tr style="border-bottom:1px solid #1e293b;">
+                  <td style="padding:10px;font-weight:700;">34TEST01</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">2</td>
+                  <td style="text-align:center;padding:10px;color:#86efac;font-weight:700;">🟢 SAĞLAM</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px;font-weight:700;">34DPV801</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(148,163,184,0.05);">0</td>
+                  <td style="text-align:center;padding:10px;background:rgba(239,68,68,0.2);color:#fecaca;font-weight:700;">5</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);">1</td>
+                  <td style="text-align:center;padding:10px;color:#fde68a;font-weight:700;">🟡 DİKKAT</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+        </div>
+        
+        <!-- SEKME 2: ARAÇ SİCİLİ -->
+        <div id="rv3-icerik-2" style="display:none;">
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:40px;text-align:center;color:#94a3b8;">
+            <div style="font-size:48px;margin-bottom:14px;">🚗</div>
+            <h3 style="color:#e2e8f0;margin:0 0 10px 0;">ARAÇ SİCİL KARTI</h3>
+            <p style="color:#94a3b8;margin:0;">Mevcut sicil kartı buraya entegre edilecek (Sprint 2'de).</p>
+            <button onclick="ekranDegistir('ekran-sicil-karti')" style="background:#3b82f6;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-weight:700;cursor:pointer;margin-top:14px;">Şimdilik Eski Sicile Git</button>
+          </div>
+        </div>
+        
+        <!-- SEKME 3: PERSONEL SİCİLİ -->
+        <div id="rv3-icerik-3" style="display:none;">
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:40px;text-align:center;color:#94a3b8;">
+            <div style="font-size:48px;margin-bottom:14px;">👤</div>
+            <h3 style="color:#e2e8f0;margin:0 0 10px 0;">PERSONEL SİCİL KARTI</h3>
+            <p style="color:#94a3b8;margin:0;">Zenginleştirilmiş analiz (akıllı özet) buraya gelecek.</p>
+          </div>
+        </div>
+        
+        <!-- SEKME 4: AKILLI KARŞILAŞTIRMA — FLAGSHIP -->
+        <div id="rv3-icerik-4" style="display:none;">
+          
+          <!-- Tanıtım Bandı -->
+          <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid #ef4444;border-radius:14px;padding:18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:36px;">🔍</span>
+            <div>
+              <div style="color:#fef2f2;font-size:18px;font-weight:800;">BİLDİRİLMEMİŞ HASAR DEDEKTÖRÜ</div>
+              <div style="color:#fecaca;font-size:12px;">Sistem flagship özelliği — periyodik karşılaştırması + ara dönem tarama</div>
+            </div>
+          </div>
+          
+          <!-- Seçim Alanı -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+              <div>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PLAKA</div>
+                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option>34CIF093</option>
+                  <option>34DCV447</option>
+                </select>
+              </div>
+              <div>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PERİYODİK 1</div>
+                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option>Nisan 2026</option>
+                </select>
+              </div>
+              <div>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PERİYODİK 2</div>
+                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option>Mayıs 2026</option>
+                </select>
+              </div>
+              <button style="background:linear-gradient(135deg,#ef4444,#991b1b);color:#fff;border:none;padding:11px 20px;border-radius:8px;font-weight:700;cursor:pointer;">🔍 KARŞILAŞTIR</button>
+            </div>
+          </div>
+          
+          <!-- Karşılaştırma Tablosu -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #3b82f6;border-radius:14px;padding:16px;">
+              <div style="color:#93c5fd;font-size:13px;font-weight:800;margin-bottom:4px;">NİSAN PERİYODİK</div>
+              <div style="color:#cbd5e1;font-size:11px;margin-bottom:14px;">15.04.2026 · Bildiren: Güney Meral</div>
+              <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:#e2e8f0;">
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Giydirme: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Kaporta: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Lastik: <strong style="color:#86efac;">%70 ✓</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Cam: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
+                <li style="padding:6px 0;">Akü: <strong style="color:#86efac;">İYİ ✓</strong></li>
+              </ul>
+            </div>
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #ef4444;border-radius:14px;padding:16px;">
+              <div style="color:#fca5a5;font-size:13px;font-weight:800;margin-bottom:4px;">MAYIS PERİYODİK</div>
+              <div style="color:#cbd5e1;font-size:11px;margin-bottom:14px;">15.05.2026 · Bildiren: Güney Meral</div>
+              <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:#e2e8f0;">
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Giydirme: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;background:rgba(239,68,68,0.15);padding-left:8px;border-radius:4px;">Kaporta: <strong style="color:#fca5a5;">ÇİZİK 🔴</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;background:rgba(251,191,36,0.1);padding-left:8px;border-radius:4px;">Lastik: <strong style="color:#fde68a;">%55 🟡</strong></li>
+                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Cam: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
+                <li style="padding:6px 0;">Akü: <strong style="color:#86efac;">İYİ ✓</strong></li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Sistem Analizi -->
+          <div style="background:linear-gradient(135deg,#4c1d95,#2e1065);border:2px solid #a855f7;border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <span style="font-size:24px;">💡</span>
+              <h3 style="color:#e9d5ff;margin:0;font-size:16px;font-weight:800;">SİSTEM ANALİZİ</h3>
+            </div>
+            <div style="color:#ddd6fe;font-size:13px;line-height:1.9;">
+              <div style="margin-bottom:14px;">
+                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📊 TESPİT EDİLEN FARKLAR</div>
+                <div>▸ Kaporta'da <strong style="color:#fca5a5;">YENİ HASAR</strong> (SAĞLAM → ÇİZİK)</div>
+                <div>▸ Lastik aşınması: %70 → %55 (15 puan düşüş, normal)</div>
+              </div>
+              <div style="margin-bottom:14px;">
+                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">🔎 ARA DÖNEM BİLDİRİM TARAMASI</div>
+                <div>▸ Tarih aralığı: 15.04.2026 - 15.05.2026 (30 gün)</div>
+                <div>▸ Kaza/Hasar bildirimi: <strong style="color:#fca5a5;">0 ⚠️</strong></div>
+                <div>▸ Servis kaydı: <strong style="color:#fca5a5;">0 ⚠️</strong></div>
+              </div>
+              <div>
+                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📂 DRIVE FOTOĞRAF KONTROLÜ</div>
+                <div>▸ 02_SAHA: Ara dönem fotosu yok</div>
+                <div>▸ 03_PERİYODİK Arşiv: 5 Nisan fotosu var</div>
+                <button style="background:#a855f7;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:8px;font-size:12px;">📂 Drive Arşivini Aç</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- KRİTİK SONUÇ -->
+          <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:3px solid #ef4444;border-radius:14px;padding:20px;box-shadow:0 4px 30px rgba(239,68,68,0.4);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <span style="font-size:30px;">🚨</span>
+              <div style="color:#fef2f2;font-size:20px;font-weight:800;">KRİTİK SONUÇ</div>
+            </div>
+            <div style="color:#fecaca;font-size:14px;line-height:1.8;margin-bottom:16px;">
+              Bu <strong>KAPORTA HASARI hiç bildirilmemiş.</strong><br>
+              Şoför <strong>Güney Meral</strong>'e sorulması önerilir.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button style="background:#10b981;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">📞 Şoföre Bildirim Gönder</button>
+              <button style="background:#3b82f6;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">📝 Sicile Not Ekle</button>
+              <button style="background:#64748b;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">✅ Bildirim Alındı</button>
+            </div>
+          </div>
+          
+        </div>
+        
+      </div>
+      
+      <!-- === SAĞ STICKY SIDEBAR === -->
+      <div style="position:sticky;top:16px;align-self:flex-start;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 32px);overflow-y:auto;">
+        
+        <div style="background:linear-gradient(135deg,#064e3b,#022c22);border:2px solid #10b981;border-radius:14px;padding:14px;">
+          <div style="color:#86efac;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">⚡ HIZLI ERİŞİM</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="ekranDegistir('ekran-yonetim-v3')" style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">🛡️ Yönetim Merkezi</button>
+            <button onclick="ekranDegistir('ekran-sicil-karti')" style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📋 Sicil Kartı</button>
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📎 Evrak Yükle</button>
+            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">⚙️ Ayarlar</button>
+          </div>
+        </div>
+        
+        <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:14px;">
+          <div style="color:#cbd5e1;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">📑 SHEET BAĞLANTILARI</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📊 Ana Sheet</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📝 Saha Bildirimleri</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🚓 Trafik Cezaları</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🔧 Servis Kayıt</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📦 Envanter</a>
+            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🛠️ Bakım Genel</a>
+          </div>
+        </div>
+        
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+  // Raporlama v3 sekme yönetimi
+  function rv3Sekme(no) {
+    for (let i = 1; i <= 4; i++) {
+      const tab = document.getElementById('rv3-tab-' + i);
+      const icerik = document.getElementById('rv3-icerik-' + i);
+      if (i === no) {
+        tab.style.background = 'linear-gradient(135deg,#0066b3,#003d6b)';
+        tab.style.color = '#fff';
+        tab.style.borderBottom = '3px solid #1e88e5';
+        icerik.style.display = 'block';
+      } else {
+        tab.style.background = '#1e293b';
+        tab.style.color = '#94a3b8';
+        tab.style.borderBottom = 'none';
+        icerik.style.display = 'none';
+      }
+    }
+  }
+  
+  // === RAPORLAMA v3 VERİ YÜKLEME ===
+  function rv3VeriYukle() {
+    // Tarih
+    const bugun = new Date();
+    const tarihStr = bugun.getDate().toString().padStart(2,'0') + '.' + 
+                     (bugun.getMonth()+1).toString().padStart(2,'0') + '.' + 
+                     bugun.getFullYear();
+    const bugunTarihEl = document.getElementById('rv3-bugun-tarih');
+    if (bugunTarihEl) bugunTarihEl.innerText = tarihStr;
+    
+    // 1. BUGÜNKÜ ARAÇ DURUMU
+    google.script.run
+      .withSuccessHandler(rv3BugunDurumBas)
+      .withFailureHandler(function(err){
+        const g = document.getElementById('rv3-bugun-grid');
+        if (g) g.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">⚠️ Veri alınamadı: ' + err.message + '</div>';
+      })
+      .gunlukDurumGetir();
+    
+    // 2. FİLO BİLGİSİ
+    google.script.run
+      .withSuccessHandler(rv3FiloBas)
+      .withFailureHandler(function(err){
+        const g = document.getElementById('rv3-filo-grid');
+        if (g) g.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">⚠️ Veri alınamadı: ' + err.message + '</div>';
+      })
+      .filoBilgisiGetir();
+  }
+  
+  // Bugünkü Durum render (gunlukDurumGetir: { basarili, toplamArac, durumlar:[{ad,ikon,toplam,avr,and}], sonGuncelleme })
+  function rv3BugunDurumBas(data) {
+    const grid = document.getElementById('rv3-bugun-grid');
+    if (!grid) return;
+    if (!data || !data.basarili || !data.durumlar) {
+      grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">⚠️ ' + (data && data.mesaj ? data.mesaj : 'Veri yok') + '</div>';
+      return;
+    }
+    
+    // Son güncelleme tarihini bas
+    if (data.sonGuncelleme) {
+      const el = document.getElementById('rv3-bugun-tarih');
+      if (el) el.innerText = data.sonGuncelleme + ' · Toplam: ' + (data.toplamArac || 0);
+    }
+    
+    const renkler = {
+      'sahada':  { bg: 'rgba(46,125,50,0.2)',  border: '#2e7d32', text: '#86efac' },
+      'servis':  { bg: 'rgba(255,160,0,0.25)', border: '#ffa000', text: '#ffd700' },
+      'bosta':   { bg: 'rgba(148,163,184,0.2)',border: '#64748b', text: '#cbd5e1' },
+      'dis':     { bg: 'rgba(168,85,247,0.2)', border: '#a855f7', text: '#e9d5ff' },
+      'kurum':   { bg: 'rgba(0,102,179,0.25)', border: '#0066b3', text: '#90caf9' },
+      'diger':   { bg: 'rgba(255,215,0,0.2)',  border: '#ffd700', text: '#fde68a' }
+    };
+    
+    // KURUM İÇİ GÖREV AND/AVR ayrı geliyorsa birleştir
+    const birlesik = [];
+    let kurumBirles = null;
+    data.durumlar.forEach(function(d) {
+      if (d.ad && d.ad.toUpperCase().indexOf("KURUM İÇİ") !== -1) {
+        if (!kurumBirles) {
+          kurumBirles = { ad: "KURUM İÇİ GÖREV", ikon: d.ikon, sinif: "kurum", toplam: 0, avr: 0, and: 0 };
+          birlesik.push(kurumBirles);
+        }
+        kurumBirles.toplam += (d.toplam || 0);
+        if (d.ad.toUpperCase().indexOf("AND") !== -1) kurumBirles.and += (d.toplam || 0);
+        if (d.ad.toUpperCase().indexOf("AVR") !== -1) kurumBirles.avr += (d.toplam || 0);
+      } else {
+        birlesik.push(d);
+      }
+    });
+    
+    let html = '';
+    birlesik.forEach(function(d) {
+      const r = renkler[d.sinif] || { bg: 'rgba(30,136,229,0.2)', border: '#1e88e5', text: '#dbeafe' };
+      let altSatir = '';
+      if (typeof d.avr === 'number' || typeof d.and === 'number' || typeof d.genel === 'number') {
+        const parcalar = [];
+        if (typeof d.avr === 'number') parcalar.push('AVR:' + d.avr);
+        if (typeof d.and === 'number') parcalar.push('AND:' + d.and);
+        if (typeof d.genel === 'number' && d.genel > 0) parcalar.push('GENEL:' + d.genel);
+        altSatir = '<div style="font-size:10px;color:' + r.text + ';opacity:0.8;margin-top:3px;">' + parcalar.join(' · ') + '</div>';
+      }
+      html += '<div style="background:' + r.bg + ';border:1px solid ' + r.border + ';border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'" onclick="alert(\'' + d.ad + ' detayı yakında bağlanacak\')">' +
+              '<div style="font-size:16px;margin-bottom:2px;">' + (d.ikon || '📊') + '</div>' +
+              '<div style="font-size:22px;font-weight:800;color:' + r.text + ';line-height:1;">' + d.toplam + '</div>' +
+              '<div style="font-size:9px;color:' + r.text + ';margin-top:4px;letter-spacing:0.3px;font-weight:700;line-height:1.2;">' + d.ad + '</div>' +
+              altSatir +
+              '</div>';
+    });
+    grid.innerHTML = html;
+  }
+  
+  // Filo Bilgisi render
+  function rv3FiloBas(data) {
+    const grid = document.getElementById('rv3-filo-grid');
+    if (!grid) return;
+    if (!data || !data.basarili) {
+      grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">⚠️ ' + (data && data.mesaj ? data.mesaj : 'Veri yok') + '</div>';
+      return;
+    }
+    
+    function dagilimRender(obj, baslik, ikon) {
+      let html = '<div style="background:rgba(0,102,179,0.15);border:1px solid #1e88e5;border-radius:10px;padding:12px;">' +
+                 '<div style="color:#90caf9;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-bottom:8px;">' + ikon + ' ' + baslik + '</div>';
+      const keys = Object.keys(obj).filter(k => obj[k] > 0).sort((a,b) => obj[b] - obj[a]);
+      if (keys.length === 0) {
+        html += '<div style="color:#94a3b8;font-size:12px;">Veri yok</div>';
+      } else {
+        keys.forEach(k => {
+          html += '<div style="display:flex;justify-content:space-between;color:#dbeafe;font-size:12px;padding:3px 0;">' +
+                  '<span>' + k + '</span><span style="font-weight:700;color:#ffd700;">' + obj[k] + '</span></div>';
+        });
+      }
+      html += '</div>';
+      return html;
+    }
+    
+    let html = '<div style="background:rgba(0,102,179,0.25);border:2px solid #0066b3;border-radius:10px;padding:14px;text-align:center;">' +
+               '<div style="font-size:36px;font-weight:800;color:#ffd700;">' + data.toplamAktif + '</div>' +
+               '<div style="font-size:11px;color:#dbeafe;margin-top:4px;letter-spacing:1px;">TOPLAM AKTİF ARAÇ</div>' +
+               '</div>';
+    
+    html += dagilimRender(data.mudurluk || {}, 'MÜDÜRLÜK', '🏢');
+    html += dagilimRender(data.tip || {}, 'ARAÇ TİPİ', '🚐');
+    html += dagilimRender(data.yil || {}, 'MODEL YILI', '📅');
+    
+    grid.innerHTML = html;
+  }
+  
+  // Sekme 1 (Genel Bakış) açılınca otomatik veri yükle
+  const _eskiRv3Sekme = rv3Sekme;
+  rv3Sekme = function(no) {
+    _eskiRv3Sekme(no);
+    if (no === 1) rv3VeriYukle();
+  };
+  </script>
 
   <!-- =============== AŞAMA 1.7 — DETAY RAPOR EKRANI (Generic) =============== -->
   <div id="ekran-rapor-detay" class="screen">
