@@ -209,107 +209,12 @@
     </div>
   </div>
 
-  <!-- =============== YÖNETİCİ PANEL =============== -->
-  <!-- Operasyonel alan: Yardımcılar + Admin görür -->
-  <<div id="ekran-yonetici-panel" class="screen">
-    <div class="top-bar">
-      <button class="back-btn" onclick="cikisYap()">⬅ ÇIKIŞ</button>
-    </div>
-    <div class="y-panel">
-      <div class="y-baslik-kart">
-        <div class="y-baslik-sol">
-          <div class="y-baslik-ikon">🛡️</div>
-          <div>
-            <div class="y-baslik-ust">YÖNETİM MERKEZİ</div>
-            <div class="y-baslik-alt" id="aktifYonetici">—</div>
-          </div>
-        </div>
-        <div class="y-baslik-rozet" id="aktifYoneticiRol">—</div>
-        <button onclick="ekranDegistir('ekran-yonetim-v3')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-left:10px;box-shadow:0 2px 8px rgba(16,185,129,0.4);">✨ YENİ MERKEZİ GÖR</button>
-      </div>
-
-      <!-- === AŞAMA B2: GÜNLÜK ARAÇ DURUMU === -->
-      <div class="gunluk-durum-kart" id="ym-gunlukDurum">
-        <div class="gunluk-durum-baslik">
-          <span class="gunluk-durum-ikon">📊</span>
-          <span class="gunluk-durum-yazi">BUGÜNKÜ ARAÇ DURUMU</span>
-          <span class="gunluk-durum-tarih" id="ym-gunlukTarih">—</span>
-        </div>
-        <div class="gunluk-durum-grid" id="ym-gunlukGrid">
-          <div class="gunluk-durum-yukleniyor">⏳ Yükleniyor...</div>
-        </div>>
-      </div>
-
-      <!-- === ACİL DURUMLAR (kırmızı kutu - Açılır-Kapanır) === -->
-      <div class="acil-kutu" id="ym-acilKutu">
-        <div class="acil-baslik" onclick="acilAcKapat()">
-          <span class="acil-ikon">🚨</span>
-          <span class="acil-baslik-yazi">ACİL DİKKAT GEREKTİRENLER</span>
-          <span class="acil-rozet" id="ym-acilRozet">0</span>
-          <span class="acil-ok" id="ym-acilOk">▼</span>
-        </div>
-        <div class="acil-liste kapali" id="ym-acilListe"></div>
-      </div>
-
-      <!-- === BEKLEYEN ONAYLAR LİSTESİ (Açılır-Kapanır) === -->
-      <div class="onay-kutu">
-        <div class="onay-baslik" onclick="bekleyenOnaylarAcKapat()">
-          <span class="onay-ikon">⏳</span>
-          <span class="onay-baslik-yazi">BEKLEYEN ONAYLAR</span>
-          <span class="onay-rozet" id="ym-onayRozet">0</span>
-          <span class="onay-ok" id="ym-onayOk">▼</span>
-        </div>
-        <div class="onay-liste kapali" id="ym-onayListe">
-          <div class="onay-bos">⏳ Bekleyen onaylar yükleniyor...</div>
-        </div>
-      </div>
-
-      <!-- === ONAY GEÇMİŞİ (Aşama 1.6 — Açılır-Kapanır, Filtreli) === -->
-      <div class="gecmis-kutu">
-        <div class="gecmis-baslik" onclick="gecmisAcKapat()">
-          <span class="gecmis-ikon">📜</span>
-          <span class="gecmis-baslik-yazi">SON İŞLEMLER</span>
-          <span class="gecmis-rozet" id="ym-gecmisRozet">0</span>
-          <span class="gecmis-ok kapali" id="ym-gecmisOk">▼</span>
-        </div>
-        <div class="gecmis-liste kapali" id="ym-gecmisListe">
-          
-          <!-- Filtre + Arama Çubuğu -->
-          <div class="gecmis-filtre-bar">
-            <div class="gecmis-filtre-btnlar">
-              <button class="gecmis-filtre-btn aktif" data-filtre="tum" onclick="gecmisFiltreDegistir(this, 'tum')">📋 TÜMÜ</button>
-              <button class="gecmis-filtre-btn" data-filtre="onay" onclick="gecmisFiltreDegistir(this, 'onay')">✅ ONAY</button>
-              <button class="gecmis-filtre-btn" data-filtre="red" onclick="gecmisFiltreDegistir(this, 'red')">❌ RED</button>
-            </div>
-            <div class="gecmis-arama-kutu">
-              <span class="gecmis-arama-ikon">🔍</span>
-              <input type="text" class="gecmis-arama-input" id="ym-gecmisArama" 
-                     placeholder="Plaka, yönetici veya kullanıcı ara..."
-                     oninput="gecmisAramaYap()">
-            </div>
-          </div>
-          
-          <!-- Geçmiş Listesi -->
-          <div id="ym-gecmisIcerik">
-            <div class="gecmis-yukleniyor">⏳ Geçmiş yükleniyor...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- === ALT BİLGİ === -->
-      <div class="y-alt-bilgi">
-        <span id="ym-sonGuncelleme">Veriler henüz yüklenmedi</span>
-        <button class="y-yenile-btn" onclick="yonetimYenile()">🔄 Yenile</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ============================================================ -->
   <!-- ============ YÖNETİM MERKEZİ v3 İSKELET (Sprint 1) ========= -->
   <!-- ============================================================ -->
   <div id="ekran-yonetim-v3" class="screen">
     <div class="top-bar">
-      <button class="back-btn" onclick="ekranDegistir('ekran-yonetici-panel')">⬅ ESKİ PANEL</button>
+      <button class="back-btn" onclick="google.script.run.withSuccessHandler(function(d){var u=document.getElementById('ymv3-saha-ul');if(u&&d.basarili){var h='';d.son5.forEach(function(b){h+='<li style=\'padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);color:#dbeafe;\'>👤 '+b.saat+' · <strong>'+b.bildiren+'</strong> · '+b.plaka+' · '+b.kategori+'</li>';});u.innerHTML=h;}}).withFailureHandler(function(e){alert('HATA:'+e.message);}).bekleyenOnayKisa();" style="margin-left:8px;background:#0066b3;">🔄 YENİLE</button>
       <button class="back-btn" onclick="cikisYap()" style="margin-left:8px;background:#7f1d1d;">⬅ ÇIKIŞ</button>
     </div>
     
@@ -318,78 +223,82 @@
       <!-- === SOL ANA İÇERİK === -->
       <div style="display:flex;flex-direction:column;gap:16px;">
         
-        <!-- KATMAN 1: ACİL EYLEM BANDI -->
-        <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid #ef4444;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(239,68,68,0.3);">
+        <!-- KATMAN 1: ACİL EYLEM BANDI (Siyah + Altın - Beşiktaş) -->
+        <div style="background:linear-gradient(135deg,#1c1c1c,#000000);border:2px solid #ffd700;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(255,215,0,0.25);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
             <span style="font-size:24px;">🚨</span>
-            <h2 style="color:#fef2f2;margin:0;font-size:18px;font-weight:800;letter-spacing:0.5px;">BUGÜN HEMEN İLGİLEN</h2>
+            <h2 style="color:#ffd700;margin:0;font-size:18px;font-weight:800;letter-spacing:0.5px;">BUGÜN HEMEN İLGİLEN</h2>
           </div>
-          <ul style="list-style:none;padding:0;margin:0;color:#fecaca;font-size:14px;line-height:2;">
-            <li>▸ <strong>3 ACİL DURUM</strong> beklemekte</li>
-            <li>▸ <strong>12 BEKLEYEN ONAY</strong> var (en eskisi 2 gün önce)</li>
-            <li>▸ <strong>5 araç</strong> Muayene veya Bakım'a 30 gün içinde yaklaşıyor</li>
-            <li>▸ <strong>2 araçta KRİTİK ENVANTER EKSİĞİ</strong> (Stepne, Kart Okuyucu)</li>
-            <li>▸ <strong>7 araçta</strong> Periyodik bildirim gecikmiş (30+ gün)</li>
+          <ul style="list-style:none;padding:0;margin:0;color:#fffbeb;font-size:14px;line-height:2;">
+            <li>▸ <strong style="color:#ffd700;">3 ACİL DURUM</strong> beklemekte</li>
+            <li>▸ <strong style="color:#ffd700;">12 BEKLEYEN ONAY</strong> var (en eskisi 2 gün önce)</li>
+            <li>▸ <strong style="color:#ffd700;">5 araç</strong> Muayene veya Bakım'a 30 gün içinde yaklaşıyor</li>
+            <li>▸ <strong style="color:#ffd700;">2 araçta KRİTİK ENVANTER EKSİĞİ</strong> (Stepne, Kart Okuyucu)</li>
+            <li>▸ <strong style="color:#ffd700;">7 araçta</strong> Periyodik bildirim gecikmiş (30+ gün)</li>
           </ul>
         </div>
         
-        <!-- KATMAN 2: 3 ANA WIDGET -->
+        <!-- KATMAN 2: 3 ANA WIDGET (İBB Mavi / Altın Sarı / Kırmızı) -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
           
-          <!-- ONAY widget -->
-          <div style="background:linear-gradient(135deg,#1e3a8a,#0c1e4a);border:2px solid #3b82f6;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Onaya Git')">
-            <div style="font-size:14px;color:#93c5fd;font-weight:700;letter-spacing:1px;">📋 ONAY</div>
-            <div style="font-size:42px;color:#dbeafe;font-weight:800;margin:8px 0;">12</div>
-            <div style="font-size:12px;color:#93c5fd;">3 yeni · 9 eski</div>
-            <div style="margin-top:10px;font-size:12px;color:#60a5fa;font-weight:600;">→ Onaya Git</div>
+          <!-- ONAY widget — İBB MAVİ -->
+          <div id="ymv3-w-onay" style="background:linear-gradient(135deg,#0066b3,#003d6b);border:2px solid #1e88e5;border-radius:14px;padding:18px;text-align:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,102,179,0.3);" onclick="alert('Onaya Git')">
+            <div style="font-size:14px;color:#ffd700;font-weight:700;letter-spacing:1px;">📋 ONAY</div>
+            <div id="ymv3-w-onay-sayi" style="font-size:42px;color:#ffffff;font-weight:800;margin:8px 0;">—</div>
+            <div id="ymv3-w-onay-alt" style="font-size:12px;color:#90caf9;">—</div>
+            <div style="margin-top:10px;font-size:12px;color:#ffd700;font-weight:600;">→ Onaya Git</div>
           </div>
           
-          <!-- SERVİSTE widget -->
-          <div style="background:linear-gradient(135deg,#78350f,#451a03);border:2px solid #f59e0b;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Serviste Liste')">
-            <div style="font-size:14px;color:#fde68a;font-weight:700;letter-spacing:1px;">🔧 SERVİSTE</div>
-            <div style="font-size:42px;color:#fef3c7;font-weight:800;margin:8px 0;">5</div>
-            <div style="font-size:12px;color:#fde68a;">2'si 7+ gün</div>
-            <div style="margin-top:10px;font-size:12px;color:#fbbf24;font-weight:600;">→ Liste</div>
+          <!-- SERVİSTE widget — Beyaz + Altın (Beşiktaş) -->
+          <div id="ymv3-w-servis" style="background:linear-gradient(135deg,#f5f5f5,#ffffff);border:2px solid #cbd5e1;border-radius:14px;padding:18px;text-align:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);" onclick="alert('Serviste Liste')">
+            <div style="font-size:14px;color:#1c1c1c;font-weight:700;letter-spacing:1px;">🔧 SERVİSTE</div>
+            <div id="ymv3-w-servis-sayi" style="font-size:42px;color:#1c1c1c;font-weight:800;margin:8px 0;">—</div>
+            <div id="ymv3-w-servis-alt" style="font-size:12px;color:#555;font-weight:600;">—</div>
+            <div style="margin-top:10px;font-size:12px;color:#1c1c1c;font-weight:700;">→ Liste</div>
           </div>
           
-          <!-- ACİL widget -->
-          <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid #ef4444;border-radius:14px;padding:18px;text-align:center;cursor:pointer;" onclick="alert('Acil Detay')">
-            <div style="font-size:14px;color:#fecaca;font-weight:700;letter-spacing:1px;">🚨 ACİL</div>
-            <div style="font-size:42px;color:#fef2f2;font-weight:800;margin:8px 0;">3</div>
-            <div style="font-size:12px;color:#fecaca;">1 yeni · 2 takip</div>
-            <div style="margin-top:10px;font-size:12px;color:#f87171;font-weight:600;">→ Detay</div>
+          <!-- ACİL widget — Siyah + Altın - Beşiktaş -->
+          <div id="ymv3-w-acil" style="background:linear-gradient(135deg,#1c1c1c,#000000);border:3px solid #ffd700;border-radius:14px;padding:18px;text-align:center;cursor:pointer;box-shadow:0 4px 20px rgba(255,215,0,0.35);" onclick="alert('Acil Detay')">
+            <div style="font-size:14px;color:#ffd700;font-weight:700;letter-spacing:1px;">🚨 ACİL</div>
+            <div id="ymv3-w-acil-sayi" style="font-size:42px;color:#ffffff;font-weight:800;margin:8px 0;">—</div>
+            <div id="ymv3-w-acil-alt" style="font-size:12px;color:#ffd700;">—</div>
+            <div style="margin-top:10px;font-size:12px;color:#ffd700;font-weight:600;">→ Detay</div>
           </div>
           
         </div>
         
-        <!-- KATMAN 3: AKILLI UYARILAR -->
-        <div style="background:linear-gradient(135deg,#78350f,#451a03);border:2px solid #fbbf24;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(251,191,36,0.2);">
+        <!-- KATMAN 3: AKILLI UYARILAR (Altın Sarısı + İBB Mavi vurgu) -->
+        <div style="background:linear-gradient(135deg,#5a4a00,#3d3200);border:2px solid #ffd700;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(255,215,0,0.2);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
             <span style="font-size:22px;">⚠️</span>
-            <h2 style="color:#fef3c7;margin:0;font-size:17px;font-weight:800;">AKILLI UYARILAR <span style="font-size:11px;font-weight:500;color:#fde68a;">(sistem öneriyor)</span></h2>
+            <h2 style="color:#ffd700;margin:0;font-size:17px;font-weight:800;">AKILLI UYARILAR <span style="font-size:11px;font-weight:500;color:#fde68a;">(sistem öneriyor)</span></h2>
           </div>
-          <ul style="list-style:none;padding:0;margin:0;color:#fde68a;font-size:13px;line-height:1.9;">
-            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34CIF093</strong> — Muayene 22 gün sonra (12.06.2026)</li>
-            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34DCV447</strong> — Sigorta yenileme zamanı (15 gün)</li>
-            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>Güney Meral</strong> — Son 30 günde 5 araç kullanmış ⚠️</li>
-            <li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(251,191,36,0.15);">• <strong>34TEST01</strong> — Periyodik bildirim 45 gündür yok</li>
-            <li style="cursor:pointer;padding:6px 0;background:rgba(16,185,129,0.1);border-radius:6px;margin-top:6px;padding-left:8px;">📲 <strong>KM bildirmeyenler:</strong> 3 araç <button style="background:#10b981;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">Hatırlatma Mesajı Hazırla</button></li>
+          <ul id="ymv3-uyarilar-ul" style="list-style:none;padding:0;margin:0;color:#fffbeb;font-size:13px;line-height:1.9;">
+            <li style="padding:8px;text-align:center;color:#fde68a;">⏳ Yükleniyor...</li>
           </ul>
-          <div style="text-align:right;margin-top:10px;color:#fbbf24;font-size:12px;font-weight:600;cursor:pointer;">→ Tümünü gör</div>
+          <div style="text-align:right;margin-top:10px;color:#ffd700;font-size:12px;font-weight:600;cursor:pointer;">→ Tümünü gör</div>
         </div>
         
-        <!-- KATMAN 4: SAHADAN SON 5 BİLDİRİM -->
-        <div style="background:linear-gradient(135deg,#4c1d95,#2e1065);border:2px solid #a855f7;border-radius:14px;padding:18px;">
+        <!-- KATMAN 3.5: ÇAPRAZ KONTROLLER (Sistem Tespitleri) -->
+        <div style="background:linear-gradient(135deg,#1a2332,#0f1726);border:2px solid #ce93d8;border-radius:14px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:22px;">🔍</span>
+            <h2 style="color:#ce93d8;margin:0;font-size:17px;font-weight:800;">SİSTEM TESPİTLERİ — ÇAPRAZ KONTROL</h2>
+          </div>
+          <div id="ymv3-capraz-icerik" style="color:#e1bee7;font-size:13px;line-height:1.8;">
+            <div style="padding:8px;text-align:center;color:#94a3b8;">⏳ Yükleniyor...</div>
+          </div>
+        </div>
+        
+        <!-- KATMAN 4: SAHADAN SON 5 BİLDİRİM (Koyu İBB Mavi + Altın aksent) -->
+        <div style="background:linear-gradient(135deg,#003d6b,#0a1a2e);border:2px solid #0066b3;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(0,102,179,0.25);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
             <span style="font-size:22px;">📜</span>
-            <h2 style="color:#e9d5ff;margin:0;font-size:17px;font-weight:800;">SAHADAN SON 5 BİLDİRİM</h2>
+            <h2 style="color:#ffd700;margin:0;font-size:17px;font-weight:800;">SAHADAN SON 5 BİLDİRİM</h2>
           </div>
-          <ul style="list-style:none;padding:0;margin:0;color:#ddd6fe;font-size:13px;">
-            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">14:25</span> · <strong>Güney Meral</strong> · 34CIF093 · KM: 12.500</li>
-            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">14:10</span> · <strong>Aşkın Şahin</strong> · 34DCV447 · Kaza/Hasar (Hafif, Tutanak: Var)</li>
-            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">13:45</span> · <strong>Sevda Y</strong> · 34TEST01 · Geçici alma (Kimden: Murat T)</li>
-            <li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">13:30</span> · <strong>Ahmet K</strong> · 34DPV801 · Envanter eksik (Stepne)</li>
-            <li style="padding:8px 0;">👤 <span style="color:#c4b5fd;">13:15</span> · <strong>Murat T</strong> · 34ABC123 · Servis çıkışı (Aldı: Aşkın Şahin)</li>
+          <ul id="ymv3-saha-ul" style="list-style:none;padding:0;margin:0;color:#dbeafe;font-size:13px;">
+  <li style="padding:12px;text-align:center;color:#c4b5fd;">⏳ Yükleniyor...</li>
+</ul>
           </ul>
           <div style="text-align:right;margin-top:10px;color:#c084fc;font-size:12px;font-weight:600;cursor:pointer;">→ Tüm saha akışı</div>
         </div>
@@ -399,31 +308,45 @@
       <!-- === SAĞ STICKY SIDEBAR === -->
       <div style="position:sticky;top:16px;align-self:flex-start;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 32px);overflow-y:auto;">
         
-        <!-- Hızlı Erişim -->
+        <!-- Modül Hızlı Erişim (Raporlama/Sicil) -->
         <div style="background:linear-gradient(135deg,#064e3b,#022c22);border:2px solid #10b981;border-radius:14px;padding:14px;">
-          <div style="color:#86efac;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">⚡ HIZLI ERİŞİM</div>
+          <div style="color:#86efac;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">🎯 MODÜLLER</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📊 Raporlama</button>
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📋 Sicil Kartı</button>
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📎 Evrak Yükle</button>
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">⚙️ Ayarlar</button>
+            <button onclick="ekranDegistir('ekran-rapor-v3'); setTimeout(rv3VeriYukle, 100);" style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📊 Raporlama Merkezi</button>
+          </div>
+        </div>
+        <!-- Hızlı Erişim Sheet'leri -->
+        <div style="background:linear-gradient(135deg,#0066b3,#003d6b);border:2px solid #ffd700;border-radius:14px;padding:14px;box-shadow:0 4px 16px rgba(0,102,179,0.3);">
+          <div style="color:#ffd700;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">⚡ HIZLI ERİŞİM</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">📊 Ana Sheet</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1965523265" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">📝 Saha Bildirimleri</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=2138116521" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">🚐 ARAÇLAR - Genel Bilgiler</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=55023510" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">📅 Araç Günlük Bilgiler</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=127283494" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">✅ Onay Geçmişi</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=204126069" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">⚙️ Ayarlar</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1394512134" target="_blank" style="color:#ffd700;text-decoration:none;padding:7px 10px;border-radius:6px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);font-weight:600;">👥 Kullanıcılar</a>
           </div>
         </div>
         
-        <!-- Sheet Bağlantıları -->
-        <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:14px;">
-          <div style="color:#cbd5e1;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">📑 SHEET BAĞLANTILARI</div>
-          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📊 Ana Sheet</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📝 Saha Bildirimleri</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">⏳ Bekleyen Onaylar</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🚓 Trafik Cezaları</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🔧 Servis Kayıt</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📦 Envanter</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🛠️ Bakım Genel</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🪪 Personel Evrakları</a>
+        <!-- Tüm Sheet Bağlantıları (açılır liste) -->
+        <details style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:14px;">
+          <summary style="color:#cbd5e1;font-size:12px;font-weight:800;letter-spacing:1px;text-align:center;cursor:pointer;list-style:none;">📑 TÜM SHEET'LER ▾</summary>
+          <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;margin-top:10px;">
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=169473941" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">📋 Zimmet İşlemleri</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1205266770" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">💥 Kaza/Hasar</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1562492725" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🎨 Giydirme</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1094211674" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🔍 Periyodik Kontrol</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=814027460" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🔧 Servis Kayıt</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1173582147" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🔄 Geçici Kullanım</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=616246345" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🪪 Personel Evrakları</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1219569419" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🚓 Trafik Cezaları</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1759904353" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">🛠️ Bakım Genel</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1826312503" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">📦 Envanter</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=196654496" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">📊 Km Bilgisi</a>
+            <a href="https://docs.google.com/spreadsheets/d/1aPCi7fOI3tDemrunC730PFC967XFWajQeHSoKoYV2Yw/edit#gid=1686517334" target="_blank" style="color:#93c5fd;text-decoration:none;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,0.1);">📝 Araç Kayıt</a>
           </div>
-        </div>
+        </details>
         
       </div>
       
@@ -982,6 +905,10 @@
 
   <script>
   // Raporlama v3 sekme yönetimi
+  function rv3Ac() {
+    ekranDegistir('ekran-rapor-v3');
+    setTimeout(function(){ rv3Sekme(1); if(typeof rv3VeriYukle==='function') rv3VeriYukle(); }, 200);
+  }
   function rv3Sekme(no) {
     for (let i = 1; i <= 4; i++) {
       const tab = document.getElementById('rv3-tab-' + i);
@@ -1002,6 +929,7 @@
   
   // === RAPORLAMA v3 VERİ YÜKLEME ===
   function rv3VeriYukle() {
+    rv3Sekme(1); // İlk sekmeyi (Genel Bakış) görünür yap
     // Tarih
     const bugun = new Date();
     const tarihStr = bugun.getDate().toString().padStart(2,'0') + '.' + 
@@ -1134,6 +1062,205 @@
     _eskiRv3Sekme(no);
     if (no === 1) rv3VeriYukle();
   };
+  
+  // ========================================================
+  // YÖNETİM MERKEZİ v3 — VERİ BAĞLAMA
+  // ========================================================
+  window.ymv3VeriYukle = function() {
+    google.script.run
+      .withSuccessHandler(ymv3BekleyenBas)
+      .withFailureHandler(function(err){ console.error("Bekleyen alınamadı:", err.message); })
+      .bekleyenOnaylariGetir();
+    
+    google.script.run
+      .withSuccessHandler(ymv3GunlukBas)
+      .withFailureHandler(function(err){ console.error("Günlük alınamadı:", err.message); })
+      .gunlukDurumGetir();
+    
+   google.script.run
+      .withSuccessHandler(ymv3UyariBas)
+      .withFailureHandler(function(err){ console.error("Uyarılar alınamadı:", err.message); })
+      .akilliUyarilarGetir();
+    
+    google.script.run
+      .withSuccessHandler(ymv3CaprazBas)
+      .withFailureHandler(function(err){ console.error("Çapraz alınamadı:", err.message); })
+      .caprazKontroller();
+  }
+  
+  function ymv3CaprazBas(data) {
+    const el = document.getElementById('ymv3-capraz-icerik');
+    if (!el || !data || !data.basarili) {
+      if (el) el.innerHTML = '<div style="padding:8px;text-align:center;color:#fecaca;">⚠️ Veri alınamadı</div>';
+      return;
+    }
+    
+    function blokYaz(baslik, ikon, liste, renk) {
+      if (!liste || liste.length === 0) return '';
+      let h = '<div style="margin-bottom:10px;"><div style="color:' + renk + ';font-weight:700;margin-bottom:4px;">' + ikon + ' ' + baslik + ' (' + liste.length + ')</div>';
+      liste.slice(0, 5).forEach(function(x) {
+        h += '<div style="padding:3px 0 3px 16px;border-left:2px solid ' + renk + ';margin-left:6px;font-size:12px;">' + (x.metin || x) + '</div>';
+      });
+      h += '</div>';
+      return h;
+    }
+    
+    let html = '';
+    html += blokYaz('Bildirimsiz Emanet Kullanım', '🚨', data.bildirimsizEmanet, '#ff5252');
+    html += blokYaz('Bildirimsiz Kaza/Hasar', '🔴', data.bildirimsizKaza, '#ff5252');
+    html += blokYaz('KM Çelişkisi (Geri Sayım)', '⚠️', data.kmCeliski, '#ffd700');
+    html += blokYaz('Servis Çelişkisi', '⚠️', data.servisCelisi, '#ffd700');
+    html += blokYaz('Ehliyet/SRC Yaklaşan/Geçen', '👤', data.yetkisizSofor, '#ce93d8');
+    
+    if (data.eksikEvrakli && data.eksikEvrakli.length > 0) {
+      html += '<div style="margin-top:8px;padding:8px;background:rgba(255,215,0,0.1);border:1px solid #ffd700;border-radius:6px;font-size:12px;color:#ffd700;">📋 <strong>Eksik Evraklı Personel (' + data.eksikEvrakli.length + '):</strong> ' + data.eksikEvrakli.slice(0, 5).join(", ") + (data.eksikEvrakli.length > 5 ? ' ...' : '') + '</div>';
+    }
+    
+    if (!html) html = '<div style="padding:8px;text-align:center;color:#86efac;">✅ Çapraz kontrol tespit yok, sistem temiz</div>';
+    
+    el.innerHTML = html;
+  }
+  
+  // Akıllı Uyarılar render
+  function ymv3UyariBas(data) {
+    const ul = document.getElementById('ymv3-uyarilar-ul');
+    if (!ul) return;
+    if (!data || !data.basarili) {
+      ul.innerHTML = '<li style="padding:8px;text-align:center;color:#fecaca;">⚠️ Veri alınamadı</li>';
+      return;
+    }
+    
+    let html = '';
+    
+    // 1. Belgeler (max 5)
+    if (data.belge && data.belge.length > 0) {
+      data.belge.slice(0, 5).forEach(function(b) {
+        const renk = b.durum === 'gecmis' ? '#fca5a5' : '#ffd700';
+        html += '<li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(255,215,0,0.15);">• <strong style="color:' + renk + ';">' + b.plaka + '</strong> — ' + b.tip + ' ' + 
+                (b.durum === 'gecmis' ? (Math.abs(b.gunFark) + ' gün önce bitti 🔴') : (b.gunFark + ' gün sonra (' + b.tarih + ')')) + '</li>';
+      });
+    }
+    
+    // 2. Periyodik gecikmiş (max 3)
+    if (data.periyodik && data.periyodik.length > 0) {
+      data.periyodik.slice(0, 3).forEach(function(p) {
+        const detay = p.durum === 'yok' ? 'Periyodik bildirim hiç yok' : 'Son periyodik ' + p.gunFark + ' gün önce';
+        html += '<li style="cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(255,215,0,0.15);">• <strong style="color:#ffd700;">' + p.plaka + '</strong> — ' + detay + ' ⚠️</li>';
+      });
+    }
+    
+    // 3. KM bildirmeyenler (WhatsApp click-to-chat)
+    if (data.kmBildirmeyenler && data.kmBildirmeyenler.length > 0) {
+      const sayi = data.kmBildirmeyenler.length;
+      const liste = data.kmBildirmeyenler.slice(0, 10).join(", ");
+      const mesaj = encodeURIComponent("📢 Halk Süt - KM Hatırlatma\n\nAşağıdaki araçların bu ay KM bildirimi yapılmadı:\n\n• " + 
+                    data.kmBildirmeyenler.join("\n• ") + "\n\nLütfen bugün içinde sahada KM bildirimi yapınız.\nSaygılar.");
+      const waLink = "https://wa.me/?text=" + mesaj;
+      html += '<li style="cursor:pointer;padding:6px 0;background:rgba(0,102,179,0.2);border:1px solid #1e88e5;border-radius:6px;margin-top:6px;padding-left:8px;">' +
+              '📲 <strong style="color:#90caf9;">KM bildirmeyenler:</strong> ' + sayi + ' araç' +
+              ' <a href="' + waLink + '" target="_blank" style="background:#25d366;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-left:8px;text-decoration:none;display:inline-block;">📲 WhatsApp Hatırlatma</a>' +
+              '<div style="font-size:11px;color:#90caf9;margin-top:4px;">' + liste + (data.kmBildirmeyenler.length > 10 ? ' ...' : '') + '</div>' +
+              '</li>';
+    }
+    
+    if (!html) html = '<li style="padding:8px;text-align:center;color:#86efac;">✅ Aktif uyarı yok</li>';
+    
+    ul.innerHTML = html;
+  }
+  
+  function ymv3BekleyenBas(data) {
+    if (!data || !data.basarili || !data.liste) return;
+    const liste = data.liste;
+    
+    // === ONAY widget ===
+    const onaySayi = document.getElementById('ymv3-w-onay-sayi');
+    const onayAlt = document.getElementById('ymv3-w-onay-alt');
+    if (onaySayi) onaySayi.textContent = liste.length;
+    
+    // Yeni vs eski (son 24 saat)
+    const simdi = new Date();
+    let yeni = 0;
+    liste.forEach(function(b) {
+      const parcalar = (b.tarih || '').split(".");
+      if (parcalar.length === 3) {
+        const tarih = new Date(parcalar[2], parseInt(parcalar[1])-1, parcalar[0]);
+        const saatlerArkasi = (simdi - tarih) / (1000*60*60);
+        if (saatlerArkasi < 24) yeni++;
+      }
+    });
+    if (onayAlt) {
+      onayAlt.textContent = liste.length === 0 ? 'Bekleyen yok' : (yeni + ' yeni · ' + (liste.length - yeni) + ' eski');
+    }
+    
+    // === ACİL widget ===
+    const acilListe = liste.filter(function(b) {
+      const k = (b.kategori || '').toUpperCase();
+      if (k.indexOf('KAZA') !== -1) return true;
+      if (k.indexOf('ENVANTER') !== -1) {
+        const detayStr = JSON.stringify(b.detaylar || []).toUpperCase();
+        if (detayStr.indexOf('STEPNE') !== -1 || detayStr.indexOf('ANTEN') !== -1 || detayStr.indexOf('KART') !== -1) return true;
+      }
+      return false;
+    });
+    const acilSayi = document.getElementById('ymv3-w-acil-sayi');
+    const acilAlt = document.getElementById('ymv3-w-acil-alt');
+    if (acilSayi) acilSayi.textContent = acilListe.length;
+    if (acilAlt) {
+      let acilYeni = 0;
+      acilListe.forEach(function(b) {
+        const parcalar = (b.tarih || '').split(".");
+        if (parcalar.length === 3) {
+          const tarih = new Date(parcalar[2], parseInt(parcalar[1])-1, parcalar[0]);
+          if ((simdi - tarih) / (1000*60*60) < 24) acilYeni++;
+        }
+      });
+      acilAlt.textContent = acilListe.length === 0 ? 'Acil yok' : (acilYeni + ' yeni · ' + (acilListe.length - acilYeni) + ' takip');
+    }
+    
+    // ACİL EYLEM BANDI — sayıları güncelle
+    const bant = document.querySelector('#ekran-yonetim-v3 ul');
+    if (bant) {
+      const liItems = bant.querySelectorAll('li');
+      if (liItems[0]) liItems[0].innerHTML = '▸ <strong>' + acilListe.length + ' ACİL DURUM</strong> beklemekte';
+      if (liItems[1]) {
+        const enEski = liste.length > 0 ? ' (en eskisi ' + liste[liste.length-1].tarih + ')' : '';
+        liItems[1].innerHTML = '▸ <strong>' + liste.length + ' BEKLEYEN ONAY</strong> var' + enEski;
+      }
+    }
+    
+    // SAHADAN SON 5 BİLDİRİM
+    const son5 = liste.slice(0, 5);
+    const sahaUl = document.getElementById('ymv3-saha-ul');
+    if (sahaUl) {
+      if (son5.length > 0) {
+        let html = '';
+        son5.forEach(function(b) {
+          const k = (b.kategori || '').replace(' BİLDİRİMİ','');
+          html += '<li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">' + b.saat + '</span> · <strong>' + (b.bildiren || '-') + '</strong> · ' + b.plaka + ' · ' + k + '</li>';
+        });
+        sahaUl.innerHTML = html;
+      } else {
+        sahaUl.innerHTML = '<li style="padding:12px;text-align:center;color:#c4b5fd;">Bekleyen saha bildirimi yok</li>';
+      }
+    }
+  }
+  
+  function ymv3GunlukBas(data) {
+    if (!data || !data.basarili || !data.durumlar) return;
+    const servis = data.durumlar.find(function(d) { return d.sinif === 'servis'; });
+    const servisSayi = document.getElementById('ymv3-w-servis-sayi');
+    const servisAlt = document.getElementById('ymv3-w-servis-alt');
+    if (servis) {
+      if (servisSayi) servisSayi.textContent = servis.toplam;
+      if (servisAlt) {
+        if (servis.toplam === 0) servisAlt.textContent = 'Servis yok';
+        else servisAlt.textContent = 'AVR:' + (servis.avr || 0) + ' · AND:' + (servis.and || 0);
+      }
+    } else {
+      if (servisSayi) servisSayi.textContent = '0';
+      if (servisAlt) servisAlt.textContent = 'Servis yok';
+    }
+  }
   </script>
 
   <!-- =============== AŞAMA 1.7 — DETAY RAPOR EKRANI (Generic) =============== -->
@@ -1275,3 +1402,20 @@
     <button id="evrakYukleBtn" onclick="evrakYukleGonder()" style="width:100%;background:#10b981;color:#fff;border:none;padding:14px;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;">📤 EVRAKI YÜKLE</button>
   </div>
 </div>
+<script>
+function ymv3SahaYenile() {
+  alert("Buton çalıştı, veri çekiliyor...");
+  google.script.run
+    .withSuccessHandler(function(d) {
+      const ul = document.getElementById('ymv3-saha-ul');
+      if (!ul || !d.basarili) return;
+      let html = '';
+      d.son5.forEach(function(b) {
+        html += '<li style="padding:8px 0;border-bottom:1px solid rgba(168,85,247,0.2);">👤 <span style="color:#c4b5fd;">' + b.saat + '</span> · <strong>' + b.bildiren + '</strong> · ' + b.plaka + ' · ' + b.kategori + '</li>';
+      });
+      ul.innerHTML = html || '<li style="padding:12px;text-align:center;">Yok</li>';
+    })
+    .withFailureHandler(function(e){ alert("HATA: " + e.message); })
+    .bekleyenOnayKisa();
+}
+</script>

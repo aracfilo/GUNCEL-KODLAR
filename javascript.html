@@ -604,10 +604,9 @@ function yoneticiKontrolEt() {
               gUyari("YETKİ", "Raporlama Merkezi sadece Admin yetkili kullanıcılar için.");
             }
           }
-          
-          // Yönetim panelini aç
-          ekranDegistir('ekran-yonetici-panel');
-          yoneticiVeriCek();
+          // Yeni Yönetim Merkezi v3 ekranını aç
+          ekranDegistir('ekran-yonetim-v3');
+          setTimeout(ymv3VeriYukle, 500);
         } else {
           if (hataAlani) hataAlani.innerText = "❌ " + (cevap.hata || "Giriş başarısız");
         }
@@ -1116,24 +1115,6 @@ function redModalGonder() {
     })
     .onayReddet(satirNo, yoneticiAdi, gerekce);
 }
-
-/**
- * Acil Durumlar kutusunu (Yönetim Merkezi) açar/kapatır.
- */
-function acilAcKapat() {
-  var liste = document.getElementById("ym-acilListe");
-  var ok = document.getElementById("ym-acilOk");
-  if (!liste || !ok) return;
-  
-  if (liste.classList.contains("kapali")) {
-    liste.classList.remove("kapali");
-    ok.classList.remove("kapali");
-  } else {
-    liste.classList.add("kapali");
-    ok.classList.add("kapali");
-  }
-}
-
 /**
  * Bekleyen Onaylar kutusunu açar/kapatır.
  * Tercih localStorage'da değil session'da tutulur — sayfa yenilenirse varsayılana döner.

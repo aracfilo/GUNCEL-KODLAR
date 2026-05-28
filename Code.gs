@@ -4575,7 +4575,525 @@ function filoBilgisiGetir() {
     return { basarili: false, mesaj: e.message };
   }
 }
-function rv3GunlukTest() {
-  const sonuc = gunlukDurumGetir();
-  Logger.log(JSON.stringify(sonuc, null, 2));
+/**
+ * AŞAMA YÖNETİM v3 — AKILLI UYARILAR MOTORU
+ * 4 uyarı tipi döner: belge, periyodik, KM bildirmeyenler, yetkisiz kullanım
+ */
+function akilliUyarilarGetir() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "akilliUyarilar_v" + CONFIG.VERSION;
+    const cached = cache.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const bugun = new Date();
+    bugun.setHours(0, 0, 0, 0);
+    
+    const sonuc = {
+      basarili: true,
+      belge: [],
+      periyodik: [],
+      kmBildirmeyenler: [],
+      yetkisizKullanim: []
+    };
+    
+    // ============================================================
+    // 1. BELGE YAKLAŞAN (Muayene/Egzoz/Trafik/Kasko 30 gün içinde)
+    // ============================================================
+    try {
+      const bakim = ss.getSheetByName("Bakım Genel");
+      if (bakim && bakim.getLastRow() > 1) {
+        const headers = bakim.getRange(1, 1, 1, bakim.getLastColumn()).getValues()[0];
+        const data = bakim.getRange(2, 1, bakim.getLastRow() - 1, bakim.getLastColumn()).getValues();
+        
+        function idxBul(arananKismi) {
+          for (let i = 0; i < headers.length; i++) {
+            const h = (headers[i] || "").toString().toLowerCase();
+            if (h.indexOf(arananKismi.toLowerCase()) !== -1) return i;
+          }
+          return -1;
+        }
+        
+        const idxPlaka = idxBul("plaka");
+        const belgeTipleri = [
+          { ad: "Muayene", idx: idxBul("muayene bitiş") },
+          { ad: "Egzoz", idx: idxBul("egzoz") },
+          { ad: "Trafik Sigortası", idx: idxBul("trafik sigorta") },
+          { ad: "Kasko", idx: idxBul("kasko") }
+        ];
+        
+        data.forEach(function(row) {
+          const plaka = row[idxPlaka] ? row[idxPlaka].toString().trim() : "";
+          if (!plaka) return;
+          
+          belgeTipleri.forEach(function(b) {
+            if (b.idx === -1) return;
+            const tarih = row[b.idx];
+            if (!(tarih instanceof Date)) return;
+            
+            const tarihMs = new Date(tarih);
+            tarihMs.setHours(0, 0, 0, 0);
+            const gunFark = Math.floor((tarihMs - bugun) / (24 * 60 * 60 * 1000));
+            
+            if (gunFark < 0) {
+              sonuc.belge.push({
+                plaka: plaka,
+                tip: b.ad,
+                gunFark: gunFark,
+                tarih: Utilities.formatDate(tarih, "Europe/Istanbul", "dd.MM.yyyy"),
+                durum: "gecmis",
+                metin: plaka + " — " + b.ad + " " + Math.abs(gunFark) + " gün önce bitti 🔴"
+              });
+            } else if (gunFark <= 30) {
+              sonuc.belge.push({
+                plaka: plaka,
+                tip: b.ad,
+                gunFark: gunFark,
+                tarih: Utilities.formatDate(tarih, "Europe/Istanbul", "dd.MM.yyyy"),
+                durum: "yaklasiyor",
+                metin: plaka + " — " + b.ad + " " + gunFark + " gün sonra (" + Utilities.formatDate(tarih, "Europe/Istanbul", "dd.MM.yyyy") + ")"
+              });
+            }
+          });
+        });
+        
+        // Geçmiş önce, sonra en yakın yaklaşan
+        sonuc.belge.sort(function(a, b) { return a.gunFark - b.gunFark; });
+      }
+    } catch (e) { logYaz("HATA", "akilliUyarilarGetir:belge", e.message); }
+    
+    // ============================================================
+    // 2. PERİYODİK GECİKMİŞ (her plaka için son periyodik 30+ gün önce)
+    // ============================================================
+    try {
+      const per = ss.getSheetByName(CONFIG.SHEET.PERIYODIK);
+      if (per && per.getLastRow() > 1) {
+        const headers = per.getRange(1, 1, 1, per.getLastColumn()).getValues()[0];
+        const data = per.getRange(2, 1, per.getLastRow() - 1, per.getLastColumn()).getValues();
+        
+        let idxPlaka = -1, idxTarih = -1;
+        for (let i = 0; i < headers.length; i++) {
+          const h = (headers[i] || "").toString().toLowerCase();
+          if (idxPlaka === -1 && h.indexOf("plaka") !== -1) idxPlaka = i;
+          if (idxTarih === -1 && h === "tarih") idxTarih = i;
+        }
+        
+        // Plaka başına son tarihi bul
+        const sonPeriyodik = {};
+        data.forEach(function(row) {
+          const plaka = row[idxPlaka] ? row[idxPlaka].toString().trim().toUpperCase() : "";
+          const tarih = row[idxTarih];
+          if (!plaka || !(tarih instanceof Date)) return;
+          if (!sonPeriyodik[plaka] || tarih > sonPeriyodik[plaka]) {
+            sonPeriyodik[plaka] = tarih;
+          }
+        });
+        
+        // ARAÇLAR - GENEL BİLGİLER'den aktif plaka listesi
+        const arac = ss.getSheetByName(CONFIG.SHEET.ARAC_GENEL);
+        if (arac && arac.getLastRow() > 1) {
+          const aBaslik = getHeaderMap(arac);
+          const aData = arac.getRange(2, 1, arac.getLastRow() - 1, arac.getLastColumn()).getValues();
+          const aPlakaIdx = aBaslik["Plaka"];
+          const aDurumIdx = aBaslik["Durum (Aktif/Pasif)"] !== undefined ? aBaslik["Durum (Aktif/Pasif)"] : aBaslik["Durum"];
+          
+          aData.forEach(function(row) {
+            const plaka = row[aPlakaIdx] ? row[aPlakaIdx].toString().trim().toUpperCase() : "";
+            const durum = (aDurumIdx !== undefined && row[aDurumIdx]) ? row[aDurumIdx].toString().toLowerCase() : "";
+            if (!plaka || durum.indexOf("pasif") !== -1) return;
+            
+            const sonTarih = sonPeriyodik[plaka];
+            if (!sonTarih) {
+              sonuc.periyodik.push({
+                plaka: plaka,
+                durum: "yok",
+                metin: plaka + " — Periyodik bildirim hiç yok ⚠️"
+              });
+            } else {
+              const t = new Date(sonTarih);
+              t.setHours(0, 0, 0, 0);
+              const gunFark = Math.floor((bugun - t) / (24 * 60 * 60 * 1000));
+              if (gunFark > 30) {
+                sonuc.periyodik.push({
+                  plaka: plaka,
+                  durum: "gecikmis",
+                  gunFark: gunFark,
+                  sonTarih: Utilities.formatDate(sonTarih, "Europe/Istanbul", "dd.MM.yyyy"),
+                  metin: plaka + " — Son periyodik " + gunFark + " gün önce (" + Utilities.formatDate(sonTarih, "Europe/Istanbul", "dd.MM.yyyy") + ")"
+                });
+              }
+            }
+          });
+          
+          sonuc.periyodik.sort(function(a, b) { return (b.gunFark || 999) - (a.gunFark || 999); });
+        }
+      }
+    } catch (e) { logYaz("HATA", "akilliUyarilarGetir:periyodik", e.message); }
+    
+    // ============================================================
+    // 3. KM BİLDİRMEYENLER (bu ay)
+    // ============================================================
+    try {
+      const km = ss.getSheetByName(CONFIG.SHEET.KM);
+      if (km && km.getLastRow() > 0) {
+        const aylar = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"];
+        const buAy = aylar[bugun.getMonth()] + " " + bugun.getFullYear();
+        const headers = km.getRange(1, 1, 1, km.getLastColumn()).getValues()[0];
+        
+        let aySutunIdx = -1;
+        for (let i = 0; i < headers.length; i++) {
+          const h = (headers[i] || "").toString().toUpperCase().trim();
+          if (h === buAy || (h.indexOf(aylar[bugun.getMonth()]) !== -1 && h.indexOf(bugun.getFullYear().toString()) !== -1)) {
+            aySutunIdx = i;
+            break;
+          }
+        }
+        
+        if (aySutunIdx !== -1 && km.getLastRow() > 1) {
+          const data = km.getRange(2, 1, km.getLastRow() - 1, km.getLastColumn()).getValues();
+          let plakaIdx = -1;
+          for (let i = 0; i < headers.length; i++) {
+            if ((headers[i] || "").toString().toUpperCase().trim() === "PLAKA") { plakaIdx = i; break; }
+          }
+          
+          if (plakaIdx !== -1) {
+            data.forEach(function(row) {
+              const plaka = row[plakaIdx] ? row[plakaIdx].toString().trim() : "";
+              const aDeger = row[aySutunIdx];
+              if (plaka && (!aDeger || aDeger === "" || isNaN(parseInt(aDeger)))) {
+                sonuc.kmBildirmeyenler.push(plaka);
+              }
+            });
+          }
+        }
+      }
+    } catch (e) { logYaz("HATA", "akilliUyarilarGetir:km", e.message); }
+    
+    // ============================================================
+    // 4. YETKİSİZ KULLANIM (geçici kullanım bildirimsiz)
+    // ============================================================
+    try {
+      const arac = ss.getSheetByName(CONFIG.SHEET.ARAC_GENEL);
+      const gunluk = ss.getSheetByName(CONFIG.SHEET.ARAC_GUNLUK_BILGILER);
+      
+      if (arac && gunluk && arac.getLastRow() > 1 && gunluk.getLastRow() > 1) {
+        // Zimmetli şoför haritası
+        const aHeader = getHeaderMap(arac);
+        const aData = arac.getRange(2, 1, arac.getLastRow() - 1, arac.getLastColumn()).getValues();
+        const aPlakaIdx = aHeader["Plaka"];
+        const aEkipIdx = aHeader["Ekip Sorumlusu"];
+        
+        const zimmetli = {};
+        aData.forEach(function(row) {
+          const p = row[aPlakaIdx] ? row[aPlakaIdx].toString().trim().toUpperCase() : "";
+          const e = (aEkipIdx !== undefined && row[aEkipIdx]) ? row[aEkipIdx].toString().trim().toUpperCase() : "";
+          if (p) zimmetli[p] = e;
+        });
+        
+        // Bugünkü saha kullanıcısı (Günlük sheet'in son satırı bugünkü olabilir)
+        // Bu kontrolü basit yapacağız - sheet yapısını bilmeden tahmin yürütemem
+        // İlerleyen sprintte detaylandırılır
+      }
+    } catch (e) { logYaz("HATA", "akilliUyarilarGetir:yetkisiz", e.message); }
+    
+    cache.put(cacheKey, JSON.stringify(sonuc), 1800); // 30 dk cache
+    return sonuc;
+    
+  } catch (e) {
+    logYaz("HATA", "akilliUyarilarGetir", e.message);
+    return { basarili: false, mesaj: e.message };
+  }
+}
+function bekleyenOnayKisa() {
+  const sonuc = bekleyenOnaylariGetir();
+  if (!sonuc.liste) return { basarili: false };
+  return {
+    basarili: true,
+    son5: sonuc.liste.slice(0, 5).map(b => ({
+      saat: b.saat,
+      bildiren: b.bildiren,
+      plaka: b.plaka,
+      kategori: (b.kategori || '').replace(' BİLDİRİMİ','')
+    }))
+  };
+}
+/**
+ * AŞAMA YÖNETİM v3 — ÇAPRAZ KONTROL MOTORU
+ * 6 kontrol döner:
+ * 1. Bildirimsiz emanet kullanım
+ * 2. KM çelişkisi (geri sayım)
+ * 3. Kayıp KM bildirimi
+ * 4. Bildirimsiz kaza/hasar (Geçici Kullanım'da "yeni hasar" + kaza bildirimi yok)
+ * 5. Yetkisiz şoför (ehliyet/SRC eksik/bitmiş ama araç kullanıyor)
+ * 6. Servis çelişkisi (Araç Günlük "serviste" ama saha bildirimi yok)
+ */
+function caprazKontroller() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "caprazKontrol_v" + CONFIG.VERSION;
+    const cached = cache.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sonuc = {
+      basarili: true,
+      bildirimsizEmanet: [],
+      kmCeliski: [],
+      bildirimsizKaza: [],
+      yetkisizSofor: [],
+      servisCelisi: []
+    };
+    
+    // --- 1. BİLDİRİMSİZ EMANET KULLANIM ---
+    // Araç Günlük Bilgiler'de "Tanımlı Şoför" ≠ "Güncel Şoför" AMA Geçici Kullanım'da kayıt YOK
+    try {
+      const gunluk = ss.getSheetByName("Araç Günlük Bilgiler");
+      const gecici = ss.getSheetByName("Geçici Kullanım");
+      
+      if (gunluk && gunluk.getLastRow() > 1) {
+        const gH = getHeaderMap(gunluk);
+        const gData = gunluk.getRange(2, 1, gunluk.getLastRow()-1, gunluk.getLastColumn()).getValues();
+        
+        // Geçici Kullanım'da onaylı plakaları topla (son 7 gün)
+        const geciciPlakalar = {};
+        if (gecici && gecici.getLastRow() > 1) {
+          const gcH = getHeaderMap(gecici);
+          const gcData = gecici.getRange(2, 1, gecici.getLastRow()-1, gecici.getLastColumn()).getValues();
+          const idxPl = gcH["PLAKA"];
+          const idxTar = gcH["TARİH"];
+          const yedi = new Date(); yedi.setDate(yedi.getDate()-7);
+          gcData.forEach(function(r) {
+            const p = (r[idxPl] || "").toString().trim().toUpperCase();
+            const t = r[idxTar];
+            if (p && (t instanceof Date) && t >= yedi) geciciPlakalar[p] = true;
+          });
+        }
+        
+        gData.forEach(function(r) {
+          const plaka = (r[gH["Plaka"]] || "").toString().trim().toUpperCase();
+          const tanimliSofor = (r[gH["Tanımlı Şoför"]] || "").toString().trim().toUpperCase();
+          const guncelSofor = (r[gH["Güncel Şoför"]] || "").toString().trim().toUpperCase();
+          if (!plaka || !tanimliSofor || !guncelSofor) return;
+          if (tanimliSofor !== guncelSofor && !geciciPlakalar[plaka]) {
+            sonuc.bildirimsizEmanet.push({
+              plaka: plaka,
+              tanimli: tanimliSofor,
+              guncel: guncelSofor,
+              metin: '<strong style="color:#ffd700;">' + plaka + '</strong> — <strong style="color:#90caf9;">Tanımlı:</strong> ' + tanimliSofor + ' · <strong style="color:#90caf9;">Güncel:</strong> ' + guncelSofor + ' · <strong style="color:#ff5252;">Bildirim YOK</strong>'
+            });
+          }
+        });
+      }
+    } catch(e) { logYaz("HATA", "caprazKontroller:emanet", e.message); }
+    
+    // --- 2. KM ÇELİŞKİSİ (önceki aydan düşük) ---
+    try {
+      const km = ss.getSheetByName("Km Bilgisi");
+      if (km && km.getLastRow() > 1) {
+        const headers = km.getRange(1, 1, 1, km.getLastColumn()).getValues()[0];
+        const data = km.getRange(2, 1, km.getLastRow()-1, km.getLastColumn()).getValues();
+        const idxPlaka = headers.indexOf("Plaka");
+        
+        // Ay sütunlarını bul (OCAK ... ARALIK)
+        const aySutunlari = [];
+        for (let i = 0; i < headers.length; i++) {
+          const h = (headers[i]||"").toString().toUpperCase().trim();
+          if (/^(OCAK|ŞUBAT|MART|NİSAN|MAYIS|HAZİRAN|TEMMUZ|AĞUSTOS|EYLÜL|EKİM|KASIM|ARALIK) \d{4}$/.test(h)) {
+            aySutunlari.push({ idx: i, ad: h });
+          }
+        }
+        
+        data.forEach(function(r) {
+          const plaka = (r[idxPlaka] || "").toString().trim();
+          if (!plaka) return;
+          let onceki = null;
+          for (let j = 0; j < aySutunlari.length; j++) {
+            const v = parseInt(r[aySutunlari[j].idx]);
+            if (!isNaN(v) && v > 0) {
+              if (onceki !== null && v < onceki.deger) {
+                sonuc.kmCeliski.push({
+                  plaka: plaka,
+                  metin: '<strong style="color:#ffd700;">' + plaka + '</strong> — <strong style="color:#90caf9;">' + aySutunlari[j].ad + ':</strong> ' + v + ' < <strong style="color:#90caf9;">' + onceki.ad + ':</strong> ' + onceki.deger + ' ⚠️'
+                });
+                break;
+              }
+              onceki = { deger: v, ad: aySutunlari[j].ad };
+            }
+          }
+        });
+      }
+    } catch(e) { logYaz("HATA", "caprazKontroller:km", e.message); }
+    
+    // --- 3. KAYIP KM BİLDİRİMİ (bu ay) — akilliUyarilarGetir zaten yapıyor, atlıyoruz
+    // (KM bildirmeyenler listesi Akıllı Uyarılar'da var)
+    
+    // --- 4. BİLDİRİMSİZ KAZA/HASAR ---
+    // Geçici Kullanım'da "YENİ HASAR VEYA EKSİK BEYANI" doluysa AMA Saha Bildirimleri'nde KAZA yoksa
+    try {
+      const gecici = ss.getSheetByName("Geçici Kullanım");
+      const saha = ss.getSheetByName("Saha Bildirimleri");
+      
+      if (gecici && gecici.getLastRow() > 1 && saha && saha.getLastRow() > 1) {
+        const gcH = getHeaderMap(gecici);
+        const gcData = gecici.getRange(2, 1, gecici.getLastRow()-1, gecici.getLastColumn()).getValues();
+        const sH = getHeaderMap(saha);
+        const sData = saha.getRange(2, 1, saha.getLastRow()-1, saha.getLastColumn()).getValues();
+        
+        // Kaza bildirimi olan plakaları topla
+        const kazaPlakalar = {};
+        const idxSPl = sH["3. Araç Plakası"];
+        const idxSKat = sH["4. İşlem Kategorisi"];
+        sData.forEach(function(r) {
+          const p = (r[idxSPl] || "").toString().trim().toUpperCase();
+          const k = (r[idxSKat] || "").toString().toUpperCase();
+          if (p && k.indexOf("KAZA") !== -1) kazaPlakalar[p] = true;
+        });
+        
+        const idxGPl = gcH["PLAKA"];
+        const idxHasar = gcH["YENİ HASAR VEYA EKSİK BEYANI"];
+        gcData.forEach(function(r) {
+          const p = (r[idxGPl] || "").toString().trim().toUpperCase();
+          const h = (r[idxHasar] || "").toString().trim();
+          if (p && h && h.toUpperCase() !== "YOK" && h.toUpperCase() !== "TEMİZ" && !kazaPlakalar[p]) {
+            sonuc.bildirimsizKaza.push({
+              plaka: p,
+              hasar: h,
+              metin: p + " — Geçici kullanım'da hasar bildirilmiş ama KAZA kaydı YOK: " + h + " 🔴"
+            });
+          }
+        });
+      }
+    } catch(e) { logYaz("HATA", "caprazKontroller:kaza", e.message); }
+    
+    // --- 5. YETKİSİZ ŞOFÖR (ehliyet bitiş / eksik evrak) ---
+    try {
+      const per = ss.getSheetByName("Personel Evrakları");
+      if (per && per.getLastRow() > 1) {
+        const pH = getHeaderMap(per);
+        const pData = per.getRange(2, 1, per.getLastRow()-1, per.getLastColumn()).getValues();
+        const idxAd = pH["Ad Soyad"];
+        const idxEhBit = pH["Ehliyet Bitiş Tarihi"];
+        const idxEksik = pH["Evrak Eksik/Pasif"];
+        const bugun = new Date(); bugun.setHours(0,0,0,0);
+        const yarın = new Date(bugun.getTime() + 30*24*60*60*1000);
+        
+        const tarihliUyarilar = [];
+        const eksikEvrakli = [];
+        
+        pData.forEach(function(r) {
+          const ad = (r[idxAd] || "").toString().trim();
+          if (!ad) return;
+          const ehBit = r[idxEhBit];
+          
+          if (ehBit instanceof Date) {
+            if (ehBit < bugun) {
+              tarihliUyarilar.push({ ad: ad, metin: ad + " — Ehliyet " + Math.floor((bugun - ehBit)/(86400000)) + " gün önce bitti 🔴" });
+            } else if (ehBit < yarın) {
+              const gun = Math.floor((ehBit - bugun)/(86400000));
+              tarihliUyarilar.push({ ad: ad, metin: ad + " — Ehliyet " + gun + " gün sonra bitiyor" });
+            }
+          } else {
+            const eksik = (r[idxEksik] || "").toString().trim().toUpperCase();
+            if (eksik === "EVET" || eksik === "VAR" || !ehBit) {
+              eksikEvrakli.push(ad);
+            }
+          }
+        });
+        
+        sonuc.yetkisizSofor = tarihliUyarilar;
+        sonuc.eksikEvrakli = eksikEvrakli;
+      }
+    } catch(e) { logYaz("HATA", "caprazKontroller:yetkisiz", e.message); }
+    
+    // --- 6. SERVİS ÇELİŞKİSİ ---
+    // Araç Günlük "Araç Çalışma Durumu" = "SERVİSTE" AMA Saha Bildirimleri'nde son 7 gün servis yoksa
+    try {
+      const gunluk = ss.getSheetByName("Araç Günlük Bilgiler");
+      const saha = ss.getSheetByName("Saha Bildirimleri");
+      
+      if (gunluk && gunluk.getLastRow() > 1 && saha && saha.getLastRow() > 1) {
+        const gH = getHeaderMap(gunluk);
+        const gData = gunluk.getRange(2, 1, gunluk.getLastRow()-1, gunluk.getLastColumn()).getValues();
+        const sH = getHeaderMap(saha);
+        const sData = saha.getRange(2, 1, saha.getLastRow()-1, saha.getLastColumn()).getValues();
+        
+        // Son 7 günde servis kaydı olan plakaları topla
+        const yedi = new Date(); yedi.setDate(yedi.getDate()-7);
+        const servisPlakalar = {};
+        const idxSPl = sH["3. Araç Plakası"];
+        const idxSKat = sH["4. İşlem Kategorisi"];
+        const idxSTar = sH["1. İşlem Zamanı"];
+        sData.forEach(function(r) {
+          const p = (r[idxSPl] || "").toString().trim().toUpperCase();
+          const k = (r[idxSKat] || "").toString().toUpperCase();
+          const t = r[idxSTar];
+          if (p && k.indexOf("SERVİS") !== -1 && (t instanceof Date) && t >= yedi) {
+            servisPlakalar[p] = true;
+          }
+        });
+        
+        const idxGPl = gH["Plaka"];
+        const idxDur = gH["Araç Çalışma Durumu"];
+        gData.forEach(function(r) {
+          const p = (r[idxGPl] || "").toString().trim().toUpperCase();
+          const d = (r[idxDur] || "").toString().toUpperCase();
+          if (p && d.indexOf("SERVİS") !== -1 && !servisPlakalar[p]) {
+            sonuc.servisCelisi.push({
+              plaka: p,
+              metin: '<strong style="color:#ffd700;">' + p + '</strong> — Sistem <strong style="color:#90caf9;">"SERVİSTE"</strong> diyor ama son 7 günde <strong style="color:#ff5252;">SERVİS BİLDİRİMİ YOK</strong> ⚠️'
+            });
+          }
+        });
+      }
+    } catch(e) { logYaz("HATA", "caprazKontroller:servis", e.message); }
+    
+    cache.put(cacheKey, JSON.stringify(sonuc), 1800);
+    return sonuc;
+    
+  } catch (e) {
+    logYaz("HATA", "caprazKontroller", e.message);
+    return { basarili: false, mesaj: e.message };
+  }
+}
+function sheetUrlleri() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const baseUrl = ss.getUrl();
+  const sheets = ["Saha Bildirimleri", "Bekleyen Onaylar", "Trafik Cezaları", "Servis Kayıt", "Envanter", "Bakım Genel", "Personel Evrakları", "Ayarlar"];
+  sheets.forEach(function(ad) {
+    const s = ss.getSheetByName(ad);
+    if (s) Logger.log(ad + " → " + baseUrl + "#gid=" + s.getSheetId());
+    else Logger.log(ad + " → YOK");
+  });
+}
+function tumSheetler() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheets().forEach(function(s) {
+    Logger.log(s.getName() + " → " + ss.getUrl() + "#gid=" + s.getSheetId());
+  });
+}
+function divSay() {
+  const html = HtmlService.createHtmlOutputFromFile('vitrin-yonetici').getContent();
+  const ac = (html.match(/<div/g) || []).length;
+  const kapa = (html.match(/<\/div>/g) || []).length;
+  Logger.log("Açılan div: " + ac);
+  Logger.log("Kapanan div: " + kapa);
+  Logger.log("Fark: " + (ac - kapa));
+}
+function divNerede() {
+  const html = HtmlService.createHtmlOutputFromFile('vitrin-yonetici').getContent();
+  const satirlar = html.split('\n');
+  let denge = 0;
+  let isaretler = [];
+  for (let i = 0; i < satirlar.length; i++) {
+    const ac = (satirlar[i].match(/<div/g) || []).length;
+    const kapa = (satirlar[i].match(/<\/div>/g) || []).length;
+    denge += ac - kapa;
+    // Her 'ekran' tanımında dengeyi kaydet
+    if (satirlar[i].indexOf('class="screen"') !== -1 || satirlar[i].indexOf("id=\"ekran-") !== -1) {
+      isaretler.push("Satır " + (i+1) + " [denge:" + denge + "] " + satirlar[i].trim().substring(0, 60));
+    }
+  }
+  Logger.log("Son denge: " + denge);
+  isaretler.forEach(function(x){ Logger.log(x); });
 }
