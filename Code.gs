@@ -5056,44 +5056,4 @@ function caprazKontroller() {
     return { basarili: false, mesaj: e.message };
   }
 }
-function sheetUrlleri() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const baseUrl = ss.getUrl();
-  const sheets = ["Saha Bildirimleri", "Bekleyen Onaylar", "Trafik Cezaları", "Servis Kayıt", "Envanter", "Bakım Genel", "Personel Evrakları", "Ayarlar"];
-  sheets.forEach(function(ad) {
-    const s = ss.getSheetByName(ad);
-    if (s) Logger.log(ad + " → " + baseUrl + "#gid=" + s.getSheetId());
-    else Logger.log(ad + " → YOK");
-  });
-}
-function tumSheetler() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.getSheets().forEach(function(s) {
-    Logger.log(s.getName() + " → " + ss.getUrl() + "#gid=" + s.getSheetId());
-  });
-}
-function divSay() {
-  const html = HtmlService.createHtmlOutputFromFile('vitrin-yonetici').getContent();
-  const ac = (html.match(/<div/g) || []).length;
-  const kapa = (html.match(/<\/div>/g) || []).length;
-  Logger.log("Açılan div: " + ac);
-  Logger.log("Kapanan div: " + kapa);
-  Logger.log("Fark: " + (ac - kapa));
-}
-function divNerede() {
-  const html = HtmlService.createHtmlOutputFromFile('vitrin-yonetici').getContent();
-  const satirlar = html.split('\n');
-  let denge = 0;
-  let isaretler = [];
-  for (let i = 0; i < satirlar.length; i++) {
-    const ac = (satirlar[i].match(/<div/g) || []).length;
-    const kapa = (satirlar[i].match(/<\/div>/g) || []).length;
-    denge += ac - kapa;
-    // Her 'ekran' tanımında dengeyi kaydet
-    if (satirlar[i].indexOf('class="screen"') !== -1 || satirlar[i].indexOf("id=\"ekran-") !== -1) {
-      isaretler.push("Satır " + (i+1) + " [denge:" + denge + "] " + satirlar[i].trim().substring(0, 60));
-    }
-  }
-  Logger.log("Son denge: " + denge);
-  isaretler.forEach(function(x){ Logger.log(x); });
-}
+function testU(){ const s=akilliUyarilarGetir(); Logger.log(JSON.stringify({belge:s.belge.length, periyodik:s.periyodik.length, km:s.kmBildirmeyenler.length})); }
