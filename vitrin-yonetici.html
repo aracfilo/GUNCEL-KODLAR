@@ -1227,6 +1227,13 @@
         const enEski = liste.length > 0 ? ' (en eskisi ' + liste[liste.length-1].tarih + ')' : '';
         liItems[1].innerHTML = '▸ <strong>' + liste.length + ' BEKLEYEN ONAY</strong> var' + enEski;
       }
+      // Satır 3 (belge) + 5 (periyodik) akıllı uyarılardan, 4 (envanter) gizli
+      google.script.run.withSuccessHandler(function(u){
+        if(!u || !u.basarili) return;
+        if(liItems[2]) liItems[2].innerHTML = '▸ <strong style="color:#ffd700;">' + (u.belge ? u.belge.length : 0) + ' araç</strong> belge bitişine 30 gün içinde yaklaşıyor';
+        if(liItems[3]) liItems[3].style.display = 'none';
+        if(liItems[4]) liItems[4].innerHTML = '▸ <strong style="color:#ffd700;">' + (u.periyodik ? u.periyodik.length : 0) + ' araçta</strong> Periyodik bildirim gecikmiş';
+      }).akilliUyarilarGetir();
     }
     
     // SAHADAN SON 5 BİLDİRİM
