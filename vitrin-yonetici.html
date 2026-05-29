@@ -223,21 +223,20 @@
       <!-- === SOL ANA İÇERİK === -->
       <div style="display:flex;flex-direction:column;gap:16px;">
         
-       if (liItems[1]) {
-        const enEski = liste.length > 0 ? ' (en eskisi ' + liste[liste.length-1].tarih + ')' : '';
-        liItems[1].innerHTML = '▸ <strong>' + liste.length + ' BEKLEYEN ONAY</strong> var' + enEski;
-      }
-    }
-    // Akıllı uyarılardan bant satır 3 ve 5 (belge + periyodik)
-    google.script.run.withSuccessHandler(function(u){
-      if(!u||!u.basarili) return;
-      const b = document.querySelector('#ekran-yonetim-v3 ul');
-      if(!b) return;
-      const li = b.querySelectorAll('li');
-      if(li[2]) li[2].innerHTML = '▸ <strong style="color:#ffd700;">' + (u.belge?u.belge.length:0) + ' araç</strong> belge bitişine 30 gün içinde yaklaşıyor';
-      if(li[3]) li[3].style.display = 'none';
-      if(li[4]) li[4].innerHTML = '▸ <strong style="color:#ffd700;">' + (u.periyodik?u.periyodik.length:0) + ' araçta</strong> Periyodik bildirim gecikmiş';
-    }).akilliUyarilarGetir();
+        <!-- KATMAN 1: ACİL EYLEM BANDI -->
+        <div style="background:linear-gradient(135deg,#1c1c1c,#000000);border:2px solid #ffd700;border-radius:14px;padding:18px;box-shadow:0 4px 20px rgba(255,215,0,0.25);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:24px;">🚨</span>
+            <h2 style="color:#ffd700;margin:0;font-size:18px;font-weight:800;letter-spacing:0.5px;">BUGÜN HEMEN İLGİLEN</h2>
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;color:#fffbeb;font-size:14px;line-height:2;">
+            <li>▸ <strong style="color:#ffd700;">3 ACİL DURUM</strong> beklemekte</li>
+            <li>▸ <strong style="color:#ffd700;">12 BEKLEYEN ONAY</strong> var (en eskisi 2 gün önce)</li>
+            <li>▸ <strong style="color:#ffd700;">5 araç</strong> Muayene veya Bakım'a 30 gün içinde yaklaşıyor</li>
+            <li>▸ <strong style="color:#ffd700;">2 araçta KRİTİK ENVANTER EKSİĞİ</strong> (Stepne, Kart Okuyucu)</li>
+            <li>▸ <strong style="color:#ffd700;">7 araçta</strong> Periyodik bildirim gecikmiş (30+ gün)</li>
+          </ul>
+        </div>
         
         <!-- KATMAN 2: 3 ANA WIDGET (İBB Mavi / Altın Sarı / Kırmızı) -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
