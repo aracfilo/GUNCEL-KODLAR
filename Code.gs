@@ -5057,3 +5057,149 @@ function caprazKontroller() {
   }
 }
 function testU(){ const s=akilliUyarilarGetir(); Logger.log(JSON.stringify({belge:s.belge.length, periyodik:s.periyodik.length, km:s.kmBildirmeyenler.length})); }
+function kmTesti() {
+  const sonuc = oncekiAyKMGetir("34CIF093");
+  Logger.log("Önceki ay KM: " + sonuc);
+}
+
+// =======================================================================
+// BİLDİRİLMEMİŞ HASAR DEDEKTÖRÜ (FLAGSHIP)
+// =======================================================================
+
+// Durum alanları + kötülük sırası (yüksek = kötü)
+const HASAR_DURUM_SIRA = {
+  "Giydirme Durumu":  { "KUSURSUZ":0, "İYİ":1, "YIPRANMIŞ":2, "HASARLI":3 },
+  "Kaporta Durumu":   { "KUSURSUZ":0, "İYİ":1, "HAFİF HASARLI":2, "CİDDİ HASARLI":3 },
+  "Lastik Durumu":    { "KUSURSUZ":0, "İYİ":1, "YIPRANMIŞ":2, "DEĞİŞMELİ":3 },
+  "Cam Durumu":       { "KUSURSUZ":0, "ÇATLAK VAR":1, "KIRIK VAR":2 },
+  "Lamba Durumu":     { "TAMAMI ÇALIŞIYOR":0, "EKSİK VAR":1 },
+  "Klima Durumu":     { "ÇALIŞIYOR":0, "ÇALIŞMIYOR":1 },
+  "Akü Durumu":       { "TAM":0, "ZAYIF":1 },
+  "Genel Mekanik":    { "NORMAL":0, "ŞÜPHELİ":1, "SERVİSE GİTMESİ GEREKİYOR":2 }
+};
+
+function hasarSeviye(alan, deger) {
+  const harita = HASAR_DURUM_SIRA[alan];
+  if (!harita) return -1;
+  const d = (deger || "").toString().trim().toLocaleUpperCase("tr-TR");
+  return (harita[d] !== undefined) ? harita[d] : -1;
+}
+
+/**
+ * Bildirilmemiş Hasar Dedektörü.
+ * Bir plakanın son 2 periyodiğini karşılaştırır, kötüleşme + beyan yakalar,
+ * iki tarih arası kaza/servis bildirimi yoksa "BİLDİRİLMEMİŞ" uyarır.
+ */
+function hasarDedektoru(plaka) {
+  try {
+    if (!plaka) return { basarili: false, mesaj: "Plaka boş" };
+    const plakaUst = plaka.toString().trim().toUpperCase().replace(/\s+/g, "");
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // === 1. Periyodik kayıtları al (bu plaka) ===
+    const pSheet = ss.getSheetByName(CONFIG.SHEET.PERIYODIK);
+    if (!pSheet || pSheet.getLastRow() < 2) {
+      return { basarili: false, mesaj: "Periyodik kayıt yok" };
+    }
+    const pMap = getHeaderMap(pSheet);
+    const pData = pSheet.getRange(2, 1, pSheet.getLastRow()-1, pSheet.getLastColumn()).getValues();
+    const pPlakaIdx = pMap["Plaka"];
+    const pTarihIdx = pMap["Tarih"];
+
+    const kayitlar = [];
+    pData.forEach(function(row) {
+      const p = (row[pPlakaIdx] || "").toString().trim().toUpperCase().replace(/\s+/g, "");
+      if (p !== plakaUst) return;
+      const t = row[pTarihIdx];
+      kayitlar.push({ row: row, tarih: (t instanceof Date) ? t : null, tarihMs: (t instanceof Date) ? t.getTime() : 0 });
+    });
+
+    if (kayitlar.length < 2) {
+      return { basarili: false, mesaj: "Karşılaştırma için en az 2 periyodik gerekli (bu plakada " + kayitlar.length + " var)" };
+    }
+
+    // Tarihe göre sırala (yeni → eski), son 2'yi al
+    kayitlar.sort(function(a,b){ return b.tarihMs - a.tarihMs; });
+    const yeni = kayitlar[0];
+    const eski = kayitlar[1];
+
+    // === 2. Durum karşılaştır + beyan kontrol ===
+    const bulgular = [];
+    const alanlar = Object.keys(HASAR_DURUM_SIRA);
+    alanlar.forEach(function(alan) {
+      const eskiDeger = (eski.row[pMap[alan]] || "").toString().trim();
+      const yeniDeger = (yeni.row[pMap[alan]] || "").toString().trim();
+      const eskiSv = hasarSeviye(alan, eskiDeger);
+      const yeniSv = hasarSeviye(alan, yeniDeger);
+      if (eskiSv !== -1 && yeniSv !== -1 && yeniSv > eskiSv) {
+        bulgular.push({ alan: alan.replace(" Durumu",""), eski: eskiDeger, yeni: yeniDeger, tur: "kotulesme" });
+      }
+    });
+
+    // Beyan: "Son 1 Ay Yeni Hasar/Yıpranma = Evet"
+    const beyanAlanlar = ["Giydirme Son 1 Ay Yıpranma", "Kaporta Son 1 Ay Yıpranma"];
+    beyanAlanlar.forEach(function(alan) {
+      const v = (yeni.row[pMap[alan]] || "").toString().trim().toLocaleUpperCase("tr-TR");
+      if (v.indexOf("EVET") !== -1) {
+        bulgular.push({ alan: alan.replace(" Son 1 Ay Yıpranma",""), eski: "-", yeni: "Şoför beyanı: Evet, var", tur: "beyan" });
+      }
+    });
+
+    // === 3. Ara dönem bildirim taraması (kaza/servis) ===
+    const bas = eski.tarihMs, son = yeni.tarihMs;
+    function bildirimSay(sheetAd, tarihBaslik) {
+      const s = ss.getSheetByName(sheetAd);
+      if (!s || s.getLastRow() < 2) return 0;
+      const m = getHeaderMap(s);
+      let pIdx = m["Plaka"]; if (pIdx === undefined) pIdx = m["Plakalar"];
+      const tIdx = m[tarihBaslik];
+      if (pIdx === undefined || tIdx === undefined) return 0;
+      const d = s.getRange(2,1,s.getLastRow()-1,s.getLastColumn()).getValues();
+      let say = 0;
+      d.forEach(function(r){
+        const p = (r[pIdx] || "").toString().trim().toUpperCase().replace(/\s+/g,"");
+        if (p !== plakaUst) return;
+        const t = r[tIdx];
+        if (t instanceof Date && t.getTime() >= bas && t.getTime() <= son) say++;
+      });
+      return say;
+    }
+    const kazaSayisi = bildirimSay(CONFIG.SHEET.KAZA, "Olay Tarihi ve Saati");
+    const servisSayisi = bildirimSay(CONFIG.SHEET.SERVIS, "Servis Giriş Tarihi ve Saati");
+
+    // === 4. Foto linkleri (yeni periyodik satırından) ===
+    const fotoAlanlar = ["Giydirme Fotoları","Ön/Arka Cephe Fotoları","Sağ/Sol Yan Fotoları","Aynalar Fotoları"];
+    const fotolar = [];
+    fotoAlanlar.forEach(function(fa){
+      const v = (yeni.row[pMap[fa]] || "").toString().trim();
+      if (v) fotolar.push({ etiket: fa, link: v });
+    });
+
+    const tarihStr = function(d){ return d ? Utilities.formatDate(d,"Europe/Istanbul","dd.MM.yyyy") : "?"; };
+
+    // === 5. Sonuç ===
+    const bildirimVar = (kazaSayisi + servisSayisi) > 0;
+    const kritik = bulgular.length > 0 && !bildirimVar;
+
+    return {
+      basarili: true,
+      plaka: plakaUst,
+      eskiTarih: tarihStr(eski.tarih),
+      yeniTarih: tarihStr(yeni.tarih),
+      bulgular: bulgular,
+      kazaSayisi: kazaSayisi,
+      servisSayisi: servisSayisi,
+      bildirimVar: bildirimVar,
+      kritik: kritik,
+      fotolar: fotolar
+    };
+
+  } catch (e) {
+    logYaz("HATA", "hasarDedektoru", e.message);
+    return { basarili: false, mesaj: e.message };
+  }
+}
+
+function hasarTesti() {
+  Logger.log(JSON.stringify(hasarDedektoru("34CIF093"), null, 2));
+}

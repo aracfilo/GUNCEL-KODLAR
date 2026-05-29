@@ -775,97 +775,22 @@
           
           <!-- Seçim Alanı -->
           <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:18px;margin-bottom:16px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
               <div>
-                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PLAKA</div>
-                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
-                  <option>34CIF093</option>
-                  <option>34DCV447</option>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PLAKA SEÇ (sistem son 2 periyodiği otomatik karşılaştırır)</div>
+                <select id="hd-plaka" style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option value="">⏳ Plakalar yükleniyor...</option>
                 </select>
               </div>
-              <div>
-                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PERİYODİK 1</div>
-                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
-                  <option>Nisan 2026</option>
-                </select>
-              </div>
-              <div>
-                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PERİYODİK 2</div>
-                <select style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
-                  <option>Mayıs 2026</option>
-                </select>
-              </div>
-              <button style="background:linear-gradient(135deg,#ef4444,#991b1b);color:#fff;border:none;padding:11px 20px;border-radius:8px;font-weight:700;cursor:pointer;">🔍 KARŞILAŞTIR</button>
+              <button onclick="hdKarsilastir()" style="background:linear-gradient(135deg,#ef4444,#991b1b);color:#fff;border:none;padding:11px 20px;border-radius:8px;font-weight:700;cursor:pointer;">🔍 KARŞILAŞTIR</button>
             </div>
           </div>
           
-          <!-- Karşılaştırma Tablosu -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #3b82f6;border-radius:14px;padding:16px;">
-              <div style="color:#93c5fd;font-size:13px;font-weight:800;margin-bottom:4px;">NİSAN PERİYODİK</div>
-              <div style="color:#cbd5e1;font-size:11px;margin-bottom:14px;">15.04.2026 · Bildiren: Güney Meral</div>
-              <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:#e2e8f0;">
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Giydirme: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Kaporta: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Lastik: <strong style="color:#86efac;">%70 ✓</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Cam: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
-                <li style="padding:6px 0;">Akü: <strong style="color:#86efac;">İYİ ✓</strong></li>
-              </ul>
-            </div>
-            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #ef4444;border-radius:14px;padding:16px;">
-              <div style="color:#fca5a5;font-size:13px;font-weight:800;margin-bottom:4px;">MAYIS PERİYODİK</div>
-              <div style="color:#cbd5e1;font-size:11px;margin-bottom:14px;">15.05.2026 · Bildiren: Güney Meral</div>
-              <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:#e2e8f0;">
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Giydirme: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;background:rgba(239,68,68,0.15);padding-left:8px;border-radius:4px;">Kaporta: <strong style="color:#fca5a5;">ÇİZİK 🔴</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;background:rgba(251,191,36,0.1);padding-left:8px;border-radius:4px;">Lastik: <strong style="color:#fde68a;">%55 🟡</strong></li>
-                <li style="padding:6px 0;border-bottom:1px solid #1e293b;">Cam: <strong style="color:#86efac;">SAĞLAM ✓</strong></li>
-                <li style="padding:6px 0;">Akü: <strong style="color:#86efac;">İYİ ✓</strong></li>
-              </ul>
-            </div>
-          </div>
-          
-          <!-- Sistem Analizi -->
-          <div style="background:linear-gradient(135deg,#4c1d95,#2e1065);border:2px solid #a855f7;border-radius:14px;padding:18px;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-              <span style="font-size:24px;">💡</span>
-              <h3 style="color:#e9d5ff;margin:0;font-size:16px;font-weight:800;">SİSTEM ANALİZİ</h3>
-            </div>
-            <div style="color:#ddd6fe;font-size:13px;line-height:1.9;">
-              <div style="margin-bottom:14px;">
-                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📊 TESPİT EDİLEN FARKLAR</div>
-                <div>▸ Kaporta'da <strong style="color:#fca5a5;">YENİ HASAR</strong> (SAĞLAM → ÇİZİK)</div>
-                <div>▸ Lastik aşınması: %70 → %55 (15 puan düşüş, normal)</div>
-              </div>
-              <div style="margin-bottom:14px;">
-                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">🔎 ARA DÖNEM BİLDİRİM TARAMASI</div>
-                <div>▸ Tarih aralığı: 15.04.2026 - 15.05.2026 (30 gün)</div>
-                <div>▸ Kaza/Hasar bildirimi: <strong style="color:#fca5a5;">0 ⚠️</strong></div>
-                <div>▸ Servis kaydı: <strong style="color:#fca5a5;">0 ⚠️</strong></div>
-              </div>
-              <div>
-                <div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📂 DRIVE FOTOĞRAF KONTROLÜ</div>
-                <div>▸ 02_SAHA: Ara dönem fotosu yok</div>
-                <div>▸ 03_PERİYODİK Arşiv: 5 Nisan fotosu var</div>
-                <button style="background:#a855f7;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:8px;font-size:12px;">📂 Drive Arşivini Aç</button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- KRİTİK SONUÇ -->
-          <div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:3px solid #ef4444;border-radius:14px;padding:20px;box-shadow:0 4px 30px rgba(239,68,68,0.4);">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-              <span style="font-size:30px;">🚨</span>
-              <div style="color:#fef2f2;font-size:20px;font-weight:800;">KRİTİK SONUÇ</div>
-            </div>
-            <div style="color:#fecaca;font-size:14px;line-height:1.8;margin-bottom:16px;">
-              Bu <strong>KAPORTA HASARI hiç bildirilmemiş.</strong><br>
-              Şoför <strong>Güney Meral</strong>'e sorulması önerilir.
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button style="background:#10b981;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">📞 Şoföre Bildirim Gönder</button>
-              <button style="background:#3b82f6;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">📝 Sicile Not Ekle</button>
-              <button style="background:#64748b;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">✅ Bildirim Alındı</button>
+          <!-- SONUÇ ALANI (hasarDedektoru ile dolar) -->
+          <div id="hd-sonuc">
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:40px;text-align:center;color:#94a3b8;">
+              <div style="font-size:40px;margin-bottom:10px;">🔍</div>
+              <div>Bir plaka seç ve <strong style="color:#e2e8f0;">KARŞILAŞTIR</strong>'a bas.</div>
             </div>
           </div>
           
@@ -1425,4 +1350,102 @@ function ymv3SahaYenile() {
     .withFailureHandler(function(e){ alert("HATA: " + e.message); })
     .bekleyenOnayKisa();
 }
+
+// ===== BİLDİRİLMEMİŞ HASAR DEDEKTÖRÜ (Sekme 4) =====
+function hdPlakalariDoldur() {
+  const sel = document.getElementById('hd-plaka');
+  if (!sel) return;
+  google.script.run.withSuccessHandler(function(ayar){
+    const plakalar = (ayar && ayar["Araç Plakası"]) ? ayar["Araç Plakası"] : [];
+    let h = '<option value="">— Plaka seç —</option>';
+    plakalar.forEach(function(p){ h += '<option value="'+p+'">'+p+'</option>'; });
+    sel.innerHTML = h;
+  }).withFailureHandler(function(e){
+    sel.innerHTML = '<option value="">Plaka yüklenemedi</option>';
+  }).getAyarlar();
+}
+
+function hdKarsilastir() {
+  const sel = document.getElementById('hd-plaka');
+  const sonuc = document.getElementById('hd-sonuc');
+  const plaka = sel ? sel.value : '';
+  if (!plaka) { alert('Önce bir plaka seç.'); return; }
+  sonuc.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;">⏳ Analiz ediliyor...</div>';
+  google.script.run.withSuccessHandler(hdSonucBas).withFailureHandler(function(e){
+    sonuc.innerHTML = '<div style="text-align:center;color:#ef4444;padding:40px;">⚠️ Hata: '+e.message+'</div>';
+  }).hasarDedektoru(plaka);
+}
+
+function hdSonucBas(r) {
+  const box = document.getElementById('hd-sonuc');
+  if (!box) return;
+  if (!r || !r.basarili) {
+    box.innerHTML = '<div style="background:#1e293b;border:2px solid #475569;border-radius:14px;padding:30px;text-align:center;color:#fde68a;">ℹ️ '+(r && r.mesaj ? r.mesaj : 'Sonuç yok')+'</div>';
+    return;
+  }
+
+  // Bulgular listesi
+  let bulguHtml = '';
+  if (r.bulgular.length === 0) {
+    bulguHtml = '<div style="color:#86efac;">✓ Durumlarda kötüleşme veya beyan yok.</div>';
+  } else {
+    r.bulgular.forEach(function(b){
+      if (b.tur === 'beyan') {
+        bulguHtml += '<div style="padding:4px 0;">▸ <strong style="color:#fca5a5;">'+b.alan+'</strong>: '+b.yeni+'</div>';
+      } else {
+        bulguHtml += '<div style="padding:4px 0;">▸ <strong style="color:#fca5a5;">'+b.alan+'</strong>: '+b.eski+' → '+b.yeni+' 🔴</div>';
+      }
+    });
+  }
+
+  // Foto linkleri
+  let fotoHtml = '';
+  if (r.fotolar && r.fotolar.length > 0) {
+    r.fotolar.forEach(function(f){
+      const linkler = f.link.split('\n');
+      linkler.forEach(function(satir){
+        const url = satir.substring(satir.indexOf('http'));
+        if (url) fotoHtml += '<a href="'+url+'" target="_blank" style="display:inline-block;background:#a855f7;color:#fff;padding:6px 12px;border-radius:6px;margin:3px;font-size:12px;font-weight:700;text-decoration:none;">📷 '+f.etiket+'</a>';
+      });
+    });
+  } else {
+    fotoHtml = '<span style="color:#94a3b8;">Foto bulunamadı.</span>';
+  }
+
+  // Analiz bloğu
+  let html = '<div style="background:linear-gradient(135deg,#4c1d95,#2e1065);border:2px solid #a855f7;border-radius:14px;padding:18px;margin-bottom:16px;">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:24px;">💡</span><h3 style="color:#e9d5ff;margin:0;font-size:16px;font-weight:800;">SİSTEM ANALİZİ — '+r.plaka+'</h3></div>'+
+    '<div style="color:#ddd6fe;font-size:13px;line-height:1.9;">'+
+      '<div style="margin-bottom:14px;"><div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📊 TESPİT EDİLEN FARKLAR (Periyodik: '+r.eskiTarih+' → '+r.yeniTarih+')</div>'+bulguHtml+'</div>'+
+      '<div style="margin-bottom:14px;"><div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">🔎 ARA DÖNEM BİLDİRİM TARAMASI</div>'+
+        '<div>▸ Kaza/Hasar bildirimi: <strong style="color:'+(r.kazaSayisi>0?'#86efac':'#fca5a5')+';">'+r.kazaSayisi+(r.kazaSayisi>0?' ✓':' ⚠️')+'</strong></div>'+
+        '<div>▸ Servis kaydı: <strong style="color:'+(r.servisSayisi>0?'#86efac':'#fca5a5')+';">'+r.servisSayisi+(r.servisSayisi>0?' ✓':' ⚠️')+'</strong></div></div>'+
+      '<div><div style="color:#c4b5fd;font-weight:700;margin-bottom:6px;">📂 PERİYODİK FOTOĞRAFLAR (gözle doğrula)</div>'+fotoHtml+'</div>'+
+    '</div></div>';
+
+  // Sonuç bloğu (kritik mi değil mi)
+  if (r.kritik) {
+    html += '<div style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:3px solid #ef4444;border-radius:14px;padding:20px;box-shadow:0 4px 30px rgba(239,68,68,0.4);">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;"><span style="font-size:30px;">🚨</span><div style="color:#fef2f2;font-size:20px;font-weight:800;">KRİTİK: BİLDİRİLMEMİŞ HASAR</div></div>'+
+      '<div style="color:#fecaca;font-size:14px;line-height:1.8;">Durum kötüleşmiş ama <strong>kaza/servis bildirimi yapılmamış.</strong> Fotoğrafları kontrol edip şoföre sorulması önerilir.</div></div>';
+  } else if (r.bulgular.length > 0 && r.bildirimVar) {
+    html += '<div style="background:linear-gradient(135deg,#064e3b,#022c22);border:2px solid #10b981;border-radius:14px;padding:20px;">'+
+      '<div style="color:#86efac;font-size:18px;font-weight:800;">✅ HASAR VAR AMA BİLDİRİLMİŞ</div>'+
+      '<div style="color:#d1fae5;font-size:13px;margin-top:8px;">Kötüleşme tespit edildi ve ara dönemde kaza/servis bildirimi mevcut. Sorun yok.</div></div>';
+  } else {
+    html += '<div style="background:linear-gradient(135deg,#064e3b,#022c22);border:2px solid #10b981;border-radius:14px;padding:20px;">'+
+      '<div style="color:#86efac;font-size:18px;font-weight:800;">✅ TEMİZ</div>'+
+      '<div style="color:#d1fae5;font-size:13px;margin-top:8px;">İki periyodik arasında kötüleşme veya bildirilmemiş hasar tespit edilmedi.</div></div>';
+  }
+
+  box.innerHTML = html;
+}
+
+// Sekme 4 açılınca plakaları doldur
+(function(){
+  const eski = window.rv3Sekme;
+  if (typeof eski === 'function') {
+    window.rv3Sekme = function(no){ eski(no); if (no === 4) hdPlakalariDoldur(); };
+  }
+})();
 </script>
