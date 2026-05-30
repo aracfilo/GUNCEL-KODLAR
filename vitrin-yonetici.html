@@ -805,21 +805,6 @@
           <div style="color:#86efac;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">⚡ HIZLI ERİŞİM</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
             <button onclick="ekranDegistir('ekran-yonetim-v3')" style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">🛡️ Yönetim Merkezi</button>
-            <button onclick="ekranDegistir('ekran-sicil-karti')" style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📋 Sicil Kartı</button>
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">📎 Evrak Yükle</button>
-            <button style="background:rgba(16,185,129,0.2);color:#d1fae5;border:1px solid #10b981;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;">⚙️ Ayarlar</button>
-          </div>
-        </div>
-        
-        <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:14px;">
-          <div style="color:#cbd5e1;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;text-align:center;">📑 SHEET BAĞLANTILARI</div>
-          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📊 Ana Sheet</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📝 Saha Bildirimleri</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🚓 Trafik Cezaları</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🔧 Servis Kayıt</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">📦 Envanter</a>
-            <a href="#" style="color:#93c5fd;text-decoration:none;padding:6px 8px;border-radius:6px;background:rgba(59,130,246,0.1);">🛠️ Bakım Genel</a>
           </div>
         </div>
         
@@ -854,7 +839,6 @@
   
   // === RAPORLAMA v3 VERİ YÜKLEME ===
   function rv3VeriYukle() {
-    rv3Sekme(1); // İlk sekmeyi (Genel Bakış) görünür yap
     // Tarih
     const bugun = new Date();
     const tarihStr = bugun.getDate().toString().padStart(2,'0') + '.' + 

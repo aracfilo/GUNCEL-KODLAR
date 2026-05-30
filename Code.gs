@@ -5203,3 +5203,8 @@ function hasarDedektoru(plaka) {
 function hasarTesti() {
   Logger.log(JSON.stringify(hasarDedektoru("34CIF093"), null, 2));
 }
+function filoTest() {
+  CacheService.getScriptCache().remove("filoBilgisi_v" + CONFIG.VERSION);
+  const s = filoBilgisiGetir();
+  Logger.log(JSON.stringify(s, null, 2));
+}
