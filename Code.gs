@@ -3329,7 +3329,12 @@ function detayKartiAlanlar(modul, headerMap, row) {
   function ekle(label, sutunAdi) {
     const idx = headerMap[sutunAdi];
     if (idx !== undefined && row[idx]) {
-      const deger = row[idx].toString().trim();
+      let deger;
+      if (row[idx] instanceof Date) {
+        deger = Utilities.formatDate(row[idx], "Europe/Istanbul", "dd.MM.yyyy HH:mm");
+      } else {
+        deger = row[idx].toString().trim();
+      }
       if (deger) detaylar.push({ label: label, deger: deger });
     }
   }
@@ -5207,4 +5212,9 @@ function filoTest() {
   CacheService.getScriptCache().remove("filoBilgisi_v" + CONFIG.VERSION);
   const s = filoBilgisiGetir();
   Logger.log(JSON.stringify(s, null, 2));
+}
+function uyariTest() {
+  Logger.log("UYARI: " + JSON.stringify(akilliUyarilarGetir()).substring(0,200));
+  Logger.log("CAPRAZ: " + JSON.stringify(caprazKontroller()).substring(0,200));
+  Logger.log("BEKLEYEN: " + JSON.stringify(bekleyenOnaylariGetir()).substring(0,200));
 }

@@ -871,7 +871,7 @@ function bekleyenOnaylariRender(liste) {
     if (item.detaylar && item.detaylar.length > 0) {
       detayHtml = '<div class="onay-kart-detay">' +
         item.detaylar.map(function(d) {
-          return '<div class="onay-kart-detay-satir">• ' + escapeHtml(d) + '</div>';
+          return '<div class="onay-kart-detay-satir">• ' + linkliYap(d) + '</div>';
         }).join('') +
         '</div>';
     }
@@ -923,6 +923,13 @@ function escapeHtml(metin) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function linkliYap(metin) {
+  if (metin === null || metin === undefined) return "";
+  var dStr = metin.toString();
+  if (dStr.indexOf("http") === -1) return escapeHtml(dStr);
+  return dStr.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#60a5fa;text-decoration:underline;">🔗 LİNKİ AÇ</a>');
 }
 
 /**
@@ -2011,8 +2018,16 @@ function sicilKartiRender(sonuc) {
           var detayMetni = "";
           if (k.detaylar && k.detaylar.length > 0) {
             detayMetni = k.detaylar.map(function(d) {
+              var dStr = (d.deger == null) ? "" : d.deger.toString();
+              var degerHtml;
+              if (dStr.indexOf("http") !== -1) {
+                // İçinde URL varsa tıklanabilir link(ler) yap
+                degerHtml = dStr.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#60a5fa;text-decoration:underline;">🔗 LİNKİ AÇ</a>');
+              } else {
+                degerHtml = escapeHtml(dStr);
+              }
               return '<span class="kayit-mini-label">' + escapeHtml(d.label) + ':</span> ' +
-                     '<span class="kayit-mini-deger">' + escapeHtml(d.deger) + '</span>';
+                     '<span class="kayit-mini-deger">' + degerHtml + '</span>';
             }).join(' <span class="kayit-mini-ayrac">·</span> ');
           }
           return '<div class="arac-bolum-kayit">' +

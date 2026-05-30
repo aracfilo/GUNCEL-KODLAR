@@ -744,11 +744,21 @@
         
         <!-- SEKME 2: ARAÇ SİCİLİ -->
         <div id="rv3-icerik-2" style="display:none;">
-          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:40px;text-align:center;color:#94a3b8;">
-            <div style="font-size:48px;margin-bottom:14px;">🚗</div>
-            <h3 style="color:#e2e8f0;margin:0 0 10px 0;">ARAÇ SİCİL KARTI</h3>
-            <p style="color:#94a3b8;margin:0;">Mevcut sicil kartı buraya entegre edilecek (Sprint 2'de).</p>
-            <button onclick="ekranDegistir('ekran-sicil-karti')" style="background:#3b82f6;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-weight:700;cursor:pointer;margin-top:14px;">Şimdilik Eski Sicile Git</button>
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:24px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <span style="font-size:28px;">🚗</span>
+              <h3 style="color:#e2e8f0;margin:0;">ARAÇ SİCİL KARTI</h3>
+            </div>
+            <div style="color:#94a3b8;font-size:13px;margin-bottom:12px;">Plaka seç, aracın tüm geçmişini gör (zimmet, kaza, servis, envanter, periyodik, KM, belgeler).</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+              <div>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PLAKA</div>
+                <select id="rv3s2-plaka" style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option value="">⏳ Yükleniyor...</option>
+                </select>
+              </div>
+              <button onclick="rv3s2Ac()" style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;border:none;padding:11px 24px;border-radius:8px;font-weight:700;cursor:pointer;">📋 SİCİLİ AÇ</button>
+            </div>
           </div>
         </div>
         
@@ -965,11 +975,42 @@
     grid.innerHTML = html;
   }
   
+  // === SEKME 2: ARAÇ SİCİLİ ===
+  function rv3s2PlakaDoldur() {
+    const sel = document.getElementById('rv3s2-plaka');
+    if (!sel) return;
+    google.script.run.withSuccessHandler(function(ayar){
+      const plakalar = (ayar && ayar["Araç Plakası"]) ? ayar["Araç Plakası"] : [];
+      let h = '<option value="">— Plaka seç —</option>';
+      plakalar.forEach(function(p){ h += '<option value="'+p+'">'+p+'</option>'; });
+      sel.innerHTML = h;
+    }).withFailureHandler(function(e){
+      sel.innerHTML = '<option value="">Plaka yüklenemedi</option>';
+    }).getAyarlar();
+  }
+  
+  function rv3s2Ac() {
+    const sel = document.getElementById('rv3s2-plaka');
+    const plaka = sel ? sel.value : '';
+    if (!plaka) { alert('Önce bir plaka seç.'); return; }
+    ekranDegistir('ekran-sicil-karti');
+    setTimeout(function(){
+      if (typeof sicilKartiAc === 'function') sicilKartiAc('arac');
+      const arama = document.getElementById('sicil-arama');
+      if (arama) {
+        arama.value = plaka;
+        if (typeof sicilSec === 'function') sicilSec(plaka);
+        else if (typeof sicilYukle === 'function') sicilYukle('arac', plaka);
+      }
+    }, 200);
+  }
+  
   // Sekme 1 (Genel Bakış) açılınca otomatik veri yükle
   const _eskiRv3Sekme = rv3Sekme;
   rv3Sekme = function(no) {
     _eskiRv3Sekme(no);
     if (no === 1) rv3VeriYukle();
+    if (no === 2) rv3s2PlakaDoldur();
   };
   
   // ========================================================
