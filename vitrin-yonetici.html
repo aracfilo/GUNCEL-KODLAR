@@ -540,10 +540,10 @@
             </table>
           </div>
           
-          <!-- 5. KPI (EN ALTTA, KÜÇÜK) -->
-          <div style="background:linear-gradient(135deg,#0f172a,#020617);border:1px solid #334155;border-radius:12px;padding:14px;">
-            <div style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;text-align:center;">📋 BU AY ÖZET (Geçici Veri — Sprint 3'te bağlanacak)</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+          <!-- 5. KPI (EN ALTTA) -->
+          <div class="rv3-kpi-blok" style="background:linear-gradient(135deg,#0f172a,#020617);border:1px solid #334155;border-radius:12px;padding:14px;">
+            <div style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:10px;text-align:center;">📋 BU AY ÖZET (Geçici Veri — Sprint 3'te bağlanacak)</div>
+            <div class="rv3-kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
               <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;text-align:center;">
                 <div style="color:#86efac;font-size:10px;font-weight:700;">BU AY BİLDİRİM</div>
                 <div style="color:#d1fae5;font-size:18px;font-weight:800;margin-top:2px;">142</div>
@@ -904,8 +904,8 @@
     
     const renkler = {
       'sahada':  { bg: 'rgba(46,125,50,0.2)',  border: '#2e7d32', text: '#86efac' },
-      'servis':  { bg: 'rgba(255,160,0,0.25)', border: '#ffa000', text: '#ffd700' },
-      'bosta':   { bg: 'rgba(148,163,184,0.2)',border: '#64748b', text: '#cbd5e1' },
+      'servis':  { bg: 'rgba(255,152,0,0.22)', border: '#ff9800', text: '#ff9800' },
+      'bosta':   { bg: 'rgba(34,211,238,0.18)',border: '#22d3ee', text: '#22d3ee' },
       'dis':     { bg: 'rgba(168,85,247,0.2)', border: '#a855f7', text: '#e9d5ff' },
       'kurum':   { bg: 'rgba(0,102,179,0.25)', border: '#0066b3', text: '#90caf9' },
       'diger':   { bg: 'rgba(255,215,0,0.2)',  border: '#ffd700', text: '#fde68a' }
@@ -937,12 +937,12 @@
         if (typeof d.avr === 'number') parcalar.push('AVR:' + d.avr);
         if (typeof d.and === 'number') parcalar.push('AND:' + d.and);
         if (typeof d.genel === 'number' && d.genel > 0) parcalar.push('GENEL:' + d.genel);
-        altSatir = '<div style="font-size:10px;color:' + r.text + ';opacity:0.8;margin-top:3px;">' + parcalar.join(' · ') + '</div>';
+        altSatir = '<div style="font-size:11px;color:' + r.text + ';opacity:0.85;margin-top:3px;">' + parcalar.join(' · ') + '</div>';
       }
       html += '<div style="background:' + r.bg + ';border:1px solid ' + r.border + ';border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'" onclick="alert(\'' + d.ad + ' detayı yakında bağlanacak\')">' +
               '<div style="font-size:16px;margin-bottom:2px;">' + (d.ikon || '📊') + '</div>' +
               '<div style="font-size:22px;font-weight:800;color:' + r.text + ';line-height:1;">' + d.toplam + '</div>' +
-              '<div style="font-size:9px;color:' + r.text + ';margin-top:4px;letter-spacing:0.3px;font-weight:700;line-height:1.2;">' + d.ad + '</div>' +
+              '<div style="font-size:12px;color:' + r.text + ';margin-top:4px;letter-spacing:0.3px;font-weight:800;line-height:1.2;">' + d.ad + '</div>' +
               altSatir +
               '</div>';
     });

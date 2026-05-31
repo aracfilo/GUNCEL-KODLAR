@@ -3621,8 +3621,15 @@
   #rv3-icerik-1 [style*="grid-template-columns"] {
     grid-template-columns: 1fr 1fr !important;
   }
-  #rv3-bugun-grid { grid-template-columns: 1fr 1fr !important; }
-  #rv3-icerik-1 [style*="repeat"] { grid-template-columns: 1fr 1fr !important; }
+  #rv3-bugun-grid,
+  #rv3-icerik-1 [style*="repeat"],
+  #rv3-icerik-1 [style*="grid-template-columns"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* Raporlama: hiçbir şey ekran dışına taşmasın */
+  #ekran-rapor-v3 { overflow-x: hidden !important; }
+  #ekran-rapor-v3 .ym-ana-grid > div { min-width: 0 !important; max-width: 100% !important; overflow: hidden; }
+  #ekran-rapor-v3 [style*="min-width"] { min-width: 0 !important; }
   #rv3-icerik-1 [style*="display:flex"] {
     flex-wrap: wrap !important;
   }
@@ -3644,5 +3651,34 @@
 @media (max-width: 768px) {
   .filo-tablo-wrap { display: none !important; }
   .filo-kart-wrap { display: block !important; }
+}
+/* Raporlama + Yönetim: küçük yazıları okunur büyüt (taşmadan) */
+#ekran-rapor-v3 [style*="font-size:9px"],
+#ekran-yonetim-v3 [style*="font-size:9px"] {
+  font-size: 11px !important;
+}
+#ekran-rapor-v3 [style*="font-size:10px"],
+#ekran-yonetim-v3 [style*="font-size:10px"] {
+  font-size: 12px !important;
+}
+#ekran-rapor-v3 [style*="font-size:11px"],
+#ekran-yonetim-v3 [style*="font-size:11px"] {
+  font-size: 12.5px !important;
+}
+#ekran-rapor-v3 [style*="font-size:12px"],
+#ekran-yonetim-v3 [style*="font-size:12px"] {
+  font-size: 13px !important;
+}
+#ekran-rapor-v3 [style*="font-size:13px"],
+#ekran-yonetim-v3 [style*="font-size:13px"] {
+  font-size: 13.5px !important;
+}
+/* FİLO tablosu/kart hassas — olduğu gibi kalsın */
+.filo-tablo-wrap *, .filo-kart-wrap * { font-size: inherit; }
+/* BU AY ÖZET (KPI) — okunur fontlar + mobil 2 sütun */
+.rv3-kpi-blok div div div { font-size: 12px !important; }
+.rv3-kpi-blok [style*="font-size:18px"] { font-size: 22px !important; }
+@media (max-width: 768px) {
+  .rv3-kpi-grid { grid-template-columns: 1fr 1fr !important; }
 }
   </style>
