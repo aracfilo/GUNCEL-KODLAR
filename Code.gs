@@ -1861,6 +1861,12 @@ function bekleyenOnaylariGetir() {
       });
       const videoLink = (idxVideo !== undefined && row[idxVideo]) ? row[idxVideo].toString() : "";
       
+      // Medya linklerini detaylara ekle (LİNKİ AÇ olacak)
+      fotoLinkler.forEach(function(fl) {
+        detaylar.push("📷 " + fl);
+      });
+      if (videoLink) detaylar.push("🎥 " + videoLink);
+      
       liste.push({
         satirNo: i + 1,
         plaka: row[idxPlaka] || "",

@@ -218,7 +218,7 @@
       <button class="back-btn" onclick="cikisYap()" style="margin-left:8px;background:#7f1d1d;">⬅ ÇIKIŞ</button>
     </div>
     
-    <div style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1600px;margin:0 auto;">
+    <div class="ym-ana-grid" style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1600px;margin:0 auto;">
       
       <!-- === SOL ANA İÇERİK === -->
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -434,7 +434,7 @@
       <button class="back-btn" onclick="ekranDegistir('ekran-vitrin')" style="margin-left:8px;">🏠 VİTRİNE</button>
     </div>
     
-    <div style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1700px;margin:0 auto;">
+    <div class="ym-ana-grid" style="display:grid;grid-template-columns:1fr 220px;gap:16px;padding:16px;max-width:1700px;margin:0 auto;">
       
       <!-- === SOL ANA İÇERİK === -->
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -450,7 +450,7 @@
         </div>
         
         <!-- SEKMELER -->
-        <div style="display:flex;gap:6px;border-bottom:2px solid #334155;padding-bottom:0;">
+        <div class="rv3-sekme-bar" style="display:flex;gap:6px;border-bottom:2px solid #334155;padding-bottom:0;">
           <button id="rv3-tab-1" onclick="rv3Sekme(1)" style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;border-bottom:3px solid #60a5fa;">📊 GENEL BAKIŞ</button>
           <button id="rv3-tab-2" onclick="rv3Sekme(2)" style="background:#1e293b;color:#94a3b8;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;">🚗 ARAÇ SİCİLİ</button>
           <button id="rv3-tab-3" onclick="rv3Sekme(3)" style="background:#1e293b;color:#94a3b8;border:none;padding:12px 20px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer;">👤 PERSONEL SİCİLİ</button>
@@ -764,10 +764,21 @@
         
         <!-- SEKME 3: PERSONEL SİCİLİ -->
         <div id="rv3-icerik-3" style="display:none;">
-          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:40px;text-align:center;color:#94a3b8;">
-            <div style="font-size:48px;margin-bottom:14px;">👤</div>
-            <h3 style="color:#e2e8f0;margin:0 0 10px 0;">PERSONEL SİCİL KARTI</h3>
-            <p style="color:#94a3b8;margin:0;">Zenginleştirilmiş analiz (akıllı özet) buraya gelecek.</p>
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #475569;border-radius:14px;padding:24px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <span style="font-size:28px;">👤</span>
+              <h3 style="color:#e2e8f0;margin:0;">PERSONEL SİCİL KARTI</h3>
+            </div>
+            <div style="color:#94a3b8;font-size:13px;margin-bottom:12px;">Personel adını yaz veya seç, tüm sicilini gör (ehliyet, psikoteknik, SRC, evrak durumu).</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+              <div>
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px;">PERSONEL</div>
+                <select id="rv3s3-personel" style="width:100%;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;border:1px solid #475569;font-weight:600;">
+                  <option value="">⏳ Yükleniyor...</option>
+                </select>
+              </div>
+              <button onclick="rv3s3Ac()" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;padding:11px 24px;border-radius:8px;font-weight:700;cursor:pointer;">👤 SİCİLİ AÇ</button>
+            </div>
           </div>
         </div>
         
@@ -1004,6 +1015,31 @@
       }
     }, 200);
   }
+  // === SEKME 3: PERSONEL SİCİLİ ===
+  function rv3s3PersonelDoldur() {
+    var sel = document.getElementById('rv3s3-personel');
+    if (!sel) return;
+    google.script.run.withSuccessHandler(function(liste){
+      var arr = liste || [];
+      var h = '<option value="">— Personel seç —</option>';
+      arr.forEach(function(p){ h += '<option value="'+p+'">'+p+'</option>'; });
+      sel.innerHTML = h;
+    }).withFailureHandler(function(e){
+      sel.innerHTML = '<option value="">Liste yüklenemedi</option>';
+    }).personelListesiGetir();
+  }
+  
+  function rv3s3Ac() {
+    var sel = document.getElementById('rv3s3-personel');
+    var ad = sel ? sel.value : '';
+    if (!ad) { alert('Önce bir personel seç.'); return; }
+    if (typeof sicilKartiAc === 'function') sicilKartiAc('personel');
+    setTimeout(function(){
+      var arama = document.getElementById('sicil-arama');
+      if (arama) arama.value = ad;
+      if (typeof sicilSec === 'function') sicilSec(ad);
+    }, 250);
+  }
   
   // Sekme 1 (Genel Bakış) açılınca otomatik veri yükle
   const _eskiRv3Sekme = rv3Sekme;
@@ -1011,7 +1047,29 @@
     _eskiRv3Sekme(no);
     if (no === 1) rv3VeriYukle();
     if (no === 2) rv3s2PlakaDoldur();
+    if (no === 3) rv3s3PersonelDoldur();
   };
+  
+  function onayListeYukle() {
+    var liste = document.getElementById('ym-onayListe');
+    var sayac = document.getElementById('onay-liste-sayac');
+    if (liste) liste.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;">⏳ Yükleniyor...</div>';
+    google.script.run
+      .withSuccessHandler(function(sonuc){
+        if (!sonuc || !sonuc.basarili) {
+          if (liste) liste.innerHTML = '<div style="text-align:center;color:#ef4444;padding:30px;">⚠️ Yüklenemedi</div>';
+          return;
+        }
+        if (typeof bekleyenOnaylariRender === 'function') {
+          bekleyenOnaylariRender(sonuc.liste || []);
+        }
+        if (sayac) sayac.innerText = (sonuc.liste ? sonuc.liste.length : 0) + ' adet bekliyor';
+      })
+      .withFailureHandler(function(err){
+        if (liste) liste.innerHTML = '<div style="text-align:center;color:#ef4444;padding:30px;">⚠️ ' + err.message + '</div>';
+      })
+      .bekleyenOnaylariGetir();
+  }
   
   // ========================================================
   // YÖNETİM MERKEZİ v3 — VERİ BAĞLAMA
