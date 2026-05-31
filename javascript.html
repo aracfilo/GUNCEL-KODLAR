@@ -1374,8 +1374,8 @@ function raporlamaAc() {
   var adAlan = document.getElementById('rapor-aktifKullanici');
   if (adAlan) adAlan.innerText = aktifKullanici.adSoyad || aktifKullanici.kullaniciAdi;
   
-  ekranDegistir('ekran-rapor');
-  raporlamaVeriCek();
+  ekranDegistir('ekran-rapor-v3');
+  if (typeof rv3VeriYukle === 'function') setTimeout(rv3VeriYukle, 100);
 }
 
 /**

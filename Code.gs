@@ -4546,6 +4546,10 @@ function filoBilgisiGetir() {
       const durum = (idxDurum !== undefined && row[idxDurum]) ? row[idxDurum].toString().trim().toLowerCase() : "";
       if (durum && durum.indexOf("pasif") !== -1) return; // pasifse geç
       
+      // Plaka boşsa gerçek araç değil — atla
+      const plakaKontrol = (idxPlaka !== undefined && row[idxPlaka]) ? row[idxPlaka].toString().trim() : "";
+      if (!plakaKontrol) return;
+      
       toplamAktif++;
       
       // Statü (Ana Kademe / İKAME / Geçici)
@@ -4568,8 +4572,14 @@ function filoBilgisiGetir() {
           } else {
             anaGrup = "Diğer / Sınıflandırılmamış";
           }
-          if (!mudurlukGrup[anaGrup]) mudurlukGrup[anaGrup] = { toplam: 0, modeller: {} };
+          if (!mudurlukGrup[anaGrup]) mudurlukGrup[anaGrup] = { toplam: 0, modeller: {}, birim: {} };
           mudurlukGrup[anaGrup].toplam++;
+          // Alt birim (İsper - Çocuk Hizm. → "Çocuk Hizm.")
+          var altBirim = "Genel";
+          if (m.indexOf("-") !== -1) {
+            altBirim = m.split("-").slice(1).join("-").trim() || "Genel";
+          }
+          mudurlukGrup[anaGrup].birim[altBirim] = (mudurlukGrup[anaGrup].birim[altBirim] || 0) + 1;
           // müdürlük → model → { toplam, statu:{}, yil:{} }
           const mdl = (idxModel !== undefined && row[idxModel]) ? row[idxModel].toString().trim() : "Belirsiz";
           const mdlKey = mdl || "Belirsiz";
@@ -5245,6 +5255,26 @@ function hasarDedektoru(plaka) {
     logYaz("HATA", "hasarDedektoru", e.message);
     return { basarili: false, mesaj: e.message };
   }
+}
+function pasifAraclar() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEET.ARAC_GENEL);
+  const headerMap = getHeaderMap(sheet);
+  function idxE(adlar){ const ks=Object.keys(headerMap); for(var a=0;a<adlar.length;a++){var h=adlar[a].toLocaleLowerCase("tr-TR").replace(/\s+/g,"");for(var k=0;k<ks.length;k++){if(ks[k].toLocaleLowerCase("tr-TR").replace(/\s+/g,"")===h)return headerMap[ks[k]];}}return undefined; }
+  const iPlaka = idxE(["Plaka"]);
+  const iMud = idxE(["Müdürlük","Mudurluk"]);
+  const iDurum = idxE(["Durum (Aktif/Pasif)","Durum"]);
+  const data = sheet.getRange(2,1,sheet.getLastRow()-1,sheet.getLastColumn()).getValues();
+  const pasif = [];
+  data.forEach(function(row){
+    const plaka = (row[iPlaka]||"").toString().trim();
+    if(!plaka) return; // boş satır
+    const durum = (iDurum!==undefined&&row[iDurum])?row[iDurum].toString().trim():"";
+    if(durum.toLowerCase().indexOf("pasif")!==-1){
+      pasif.push(plaka + "  →  durum:[" + durum + "]  müdürlük:[" + (row[iMud]||"") + "]");
+    }
+  });
+  Logger.log("PASİF sayılan " + pasif.length + " dolu araç:\n" + pasif.join("\n"));
 }
 
 function hasarTesti() {
