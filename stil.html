@@ -3621,6 +3621,8 @@
   #rv3-icerik-1 [style*="grid-template-columns"] {
     grid-template-columns: 1fr 1fr !important;
   }
+  #rv3-bugun-grid { grid-template-columns: 1fr 1fr !important; }
+  #rv3-icerik-1 [style*="repeat"] { grid-template-columns: 1fr 1fr !important; }
   #rv3-icerik-1 [style*="display:flex"] {
     flex-wrap: wrap !important;
   }
@@ -3635,5 +3637,12 @@
   /* FİLO BİLGİSİ: tek satıra sıkışan listeler, font küçült */
   #rv3-filo-grid { grid-template-columns: 1fr 1fr !important; }
   #rv3-filo-grid * { font-size: 11px !important; }
+}
+/* FİLO tablosu: masaüstü tablo / mobil kart */
+.filo-tablo-wrap { display: block; overflow-x: auto; }
+.filo-kart-wrap { display: none; }
+@media (max-width: 768px) {
+  .filo-tablo-wrap { display: none !important; }
+  .filo-kart-wrap { display: block !important; }
 }
   </style>

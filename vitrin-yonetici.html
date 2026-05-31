@@ -949,12 +949,105 @@
     grid.innerHTML = html;
   }
   
-  // Filo Bilgisi render
+  // Filo Bilgisi render — accordion tablo
+  function rv3FiloAcKapat(id) {
+    var el = document.getElementById(id);
+    var ok = document.getElementById(id + '-ok');
+    if (!el) return;
+    if (el.style.display === 'none') { el.style.display = ''; if(ok) ok.innerText = '▲'; }
+    else { el.style.display = 'none'; if(ok) ok.innerText = '▼'; }
+  }
+  
   function rv3FiloBas(data) {
     const grid = document.getElementById('rv3-filo-grid');
     if (!grid) return;
     if (!data || !data.basarili) {
       grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">⚠️ ' + (data && data.mesaj ? data.mesaj : 'Veri yok') + '</div>';
+      return;
+    }
+    grid.style.display = 'block';
+    
+    var STATU_SIRA = ["Ana Kademe", "İKAME", "Geçici", "Belirsiz"];
+    function statuSirali(obj) {
+      var siralanan = [];
+      STATU_SIRA.forEach(function(s){ if (obj[s]) siralanan.push(s + ' ' + obj[s]); });
+      Object.keys(obj).forEach(function(s){ if (STATU_SIRA.indexOf(s) === -1) siralanan.push(s + ' ' + obj[s]); });
+      return siralanan.join(' · ');
+    }
+    function yilSirali(obj) {
+      var keys = Object.keys(obj).sort();
+      if (keys.length === 0) return '—';
+      return keys.map(function(y){ return y + ': ' + obj[y]; }).join(' · ');
+    }
+    
+    var mg = data.mudurlukGrup || {};
+    // Müdürlük tonları (her bölüm bir tık farklı)
+    var tonlar = ['rgba(0,102,179,0.18)','rgba(168,85,247,0.15)','rgba(100,116,139,0.15)','rgba(16,185,129,0.13)'];
+    
+    var html = '<div style="background:rgba(0,102,179,0.25);border:2px solid #0066b3;border-radius:10px;padding:12px;text-align:center;margin-bottom:14px;">' +
+               '<div style="font-size:30px;font-weight:800;color:#ffd700;">' + data.toplamAktif + '</div>' +
+               '<div style="font-size:11px;color:#dbeafe;letter-spacing:1px;">TOPLAM AKTİF ARAÇ</div></div>';
+    
+    // === MASAÜSTÜ TABLO ===
+    html += '<div class="filo-tablo-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px;text-align:center;border-radius:10px;overflow:hidden;">' +
+      '<thead><tr style="background:#0c1e4a;color:#ffd700;">' +
+        '<th style="padding:10px;border:1px solid #1e3a5f;">Müdürlük / Birim</th>' +
+        '<th style="padding:10px;border:1px solid #1e3a5f;">Model</th>' +
+        '<th style="padding:10px;border:1px solid #1e3a5f;">Sayı</th>' +
+        '<th style="padding:10px;border:1px solid #1e3a5f;">Araç Statüsü</th>' +
+        '<th style="padding:10px;border:1px solid #1e3a5f;">Model Yılları</th>' +
+      '</tr></thead><tbody>';
+    
+    var tonIdx = 0;
+    Object.keys(mg).forEach(function(mAd){
+      var g = mg[mAd];
+      var modelKeys = Object.keys(g.modeller).sort(function(a,b){ return g.modeller[b].toplam - g.modeller[a].toplam; });
+      var ton = tonlar[tonIdx % tonlar.length]; tonIdx++;
+      modelKeys.forEach(function(mdl, i){
+        var m = g.modeller[mdl];
+        html += '<tr style="background:' + ton + ';color:#e2e8f0;">';
+        if (i === 0) {
+          html += '<td rowspan="' + modelKeys.length + '" style="padding:8px;border:1px solid #1e3a5f;font-weight:800;color:#90caf9;vertical-align:middle;background:rgba(0,0,0,0.15);">' + mAd + '<div style="color:#ffd700;font-size:14px;margin-top:4px;">' + g.toplam + '</div></td>';
+        }
+        html += '<td style="padding:8px;border:1px solid #1e3a5f;font-weight:600;">' + mdl + '</td>' +
+                '<td style="padding:8px;border:1px solid #1e3a5f;color:#ffd700;font-weight:700;">' + m.toplam + '</td>' +
+                '<td style="padding:8px;border:1px solid #1e3a5f;color:#86efac;font-size:11px;">' + statuSirali(m.statu) + '</td>' +
+                '<td style="padding:8px;border:1px solid #1e3a5f;color:#fde68a;font-size:11px;">' + yilSirali(m.yil) + '</td>';
+        html += '</tr>';
+      });
+    });
+    html += '</tbody></table></div>';
+    
+    // === MOBİL KART ===
+    html += '<div class="filo-kart-wrap" style="display:none;">';
+    tonIdx = 0;
+    Object.keys(mg).forEach(function(mAd){
+      var g = mg[mAd];
+      var ton = tonlar[tonIdx % tonlar.length]; tonIdx++;
+      html += '<div style="background:' + ton + ';border:1px solid #1e88e5;border-radius:10px;padding:10px;margin-bottom:10px;">' +
+              '<div style="display:flex;justify-content:space-between;color:#90caf9;font-weight:800;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;margin-bottom:6px;"><span>🏢 ' + mAd + '</span><span style="color:#ffd700;">' + g.toplam + '</span></div>';
+      var modelKeys = Object.keys(g.modeller).sort(function(a,b){ return g.modeller[b].toplam - g.modeller[a].toplam; });
+      modelKeys.forEach(function(mdl){
+        var m = g.modeller[mdl];
+        html += '<div style="padding:6px 0;border-bottom:1px solid rgba(148,163,184,0.1);">' +
+                  '<div style="display:flex;justify-content:space-between;color:#e2e8f0;font-weight:700;font-size:12px;"><span>' + mdl + '</span><span style="color:#ffd700;">' + m.toplam + '</span></div>' +
+                  '<div style="color:#86efac;font-size:10px;margin-top:2px;">📋 ' + statuSirali(m.statu) + '</div>' +
+                  '<div style="color:#fde68a;font-size:10px;">📅 ' + yilSirali(m.yil) + '</div>' +
+                '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    grid.innerHTML = html;
+    return;
+  }
+  
+  function rv3FiloBasESKI(data) {
+    const grid = document.getElementById('rv3-filo-grid');
+    if (!grid) return;
+    if (!data || !data.basarili) {
+      grid.innerHTML = '';
       return;
     }
     

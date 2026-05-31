@@ -4518,18 +4518,27 @@ function filoBilgisiGetir() {
     const headerMap = getHeaderMap(sheet);
     const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
     
-    // Sütun indeksleri (esnek)
-    const idxPlaka = headerMap["Plaka"];
-    const idxMudurluk = headerMap["Müdürlük"];
-    const idxTip = headerMap["Araç Tipi"];
-    const idxModel = headerMap["Model"];
-    const idxYil = headerMap["Model Yili"] !== undefined ? headerMap["Model Yili"] : headerMap["Model Yılı"];
-    const idxDurum = headerMap["Durum (Aktif/Pasif)"] !== undefined ? headerMap["Durum (Aktif/Pasif)"] : headerMap["Durum"];
+    // Sütun indeksleri (esnek — büyük/küçük harf ve boşluk toleranslı)
+    function idxEsnek(adlar) {
+      const keys = Object.keys(headerMap);
+      for (var a = 0; a < adlar.length; a++) {
+        var hedef = adlar[a].toLocaleLowerCase("tr-TR").replace(/\s+/g, "");
+        for (var k = 0; k < keys.length; k++) {
+          if (keys[k].toLocaleLowerCase("tr-TR").replace(/\s+/g, "") === hedef) return headerMap[keys[k]];
+        }
+      }
+      return undefined;
+    }
+    const idxPlaka = idxEsnek(["Plaka"]);
+    const idxMudurluk = idxEsnek(["Müdürlük", "Mudurluk"]);
+    const idxModel = idxEsnek(["Model"]);
+    const idxStatu = idxEsnek(["Araç Statüsü", "Arac Statusu", "Statü", "Statu"]);
+    const idxYil = idxEsnek(["Model Yili", "Model Yılı"]);
+    const idxDurum = idxEsnek(["Durum (Aktif/Pasif)", "Durum"]);
     
     let toplamAktif = 0;
-    const mudurlukSayim = {};
-    const tipSayim = {};
-    const modelSayim = {};
+    const mudurlukGrup = {}; // { "İsper": { toplam, alt:{ "Ana Kademe":x, "İKAME":y, "Geçici":z } } }
+    const modelYilSayim = {}; // { "Custom 2021": 12, ... }
     const yilSayim = { "2015 ve oncesi": 0, "2016-2019": 0, "2020-2022": 0, "2023+": 0 };
     
     data.forEach(function(row) {
@@ -4539,22 +4548,52 @@ function filoBilgisiGetir() {
       
       toplamAktif++;
       
-      // Müdürlük
+      // Statü (Ana Kademe / İKAME / Geçici)
+      let statu = "Belirsiz";
+      if (idxStatu !== undefined && row[idxStatu]) {
+        const s = row[idxStatu].toString().trim();
+        if (s) statu = s;
+      }
+      
+      // Müdürlük — ana grup + statü kırılımı
       if (idxMudurluk !== undefined && row[idxMudurluk]) {
         const m = row[idxMudurluk].toString().trim();
-        if (m) mudurlukSayim[m] = (mudurlukSayim[m] || 0) + 1;
+        if (m) {
+          let anaGrup;
+          const mUpper = m.toLocaleUpperCase("tr-TR");
+          if (mUpper.indexOf("İSPER") !== -1 || mUpper.indexOf("ISPER") !== -1) {
+            anaGrup = "İsper";
+          } else if (mUpper.indexOf("DESTEK") !== -1) {
+            anaGrup = "Destek Hizmetleri";
+          } else {
+            anaGrup = "Diğer / Sınıflandırılmamış";
+          }
+          if (!mudurlukGrup[anaGrup]) mudurlukGrup[anaGrup] = { toplam: 0, modeller: {} };
+          mudurlukGrup[anaGrup].toplam++;
+          // müdürlük → model → { toplam, statu:{}, yil:{} }
+          const mdl = (idxModel !== undefined && row[idxModel]) ? row[idxModel].toString().trim() : "Belirsiz";
+          const mdlKey = mdl || "Belirsiz";
+          if (!mudurlukGrup[anaGrup].modeller[mdlKey]) {
+            mudurlukGrup[anaGrup].modeller[mdlKey] = { toplam: 0, statu: {}, yil: {} };
+          }
+          const mObj = mudurlukGrup[anaGrup].modeller[mdlKey];
+          mObj.toplam++;
+          mObj.statu[statu] = (mObj.statu[statu] || 0) + 1;
+          const ylStr = (idxYil !== undefined && row[idxYil]) ? row[idxYil].toString().trim() : "—";
+          if (ylStr && ylStr !== "—") mObj.yil[ylStr] = (mObj.yil[ylStr] || 0) + 1;
+        }
       }
       
-      // Araç tipi
-      if (idxTip !== undefined && row[idxTip]) {
-        const t = row[idxTip].toString().trim();
-        if (t) tipSayim[t] = (tipSayim[t] || 0) + 1;
-      }
-      
-      // Model
+      // Model + Yıl birleşik ("Custom 2021") + statü kırılımı
       if (idxModel !== undefined && row[idxModel]) {
         const md = row[idxModel].toString().trim();
-        if (md) modelSayim[md] = (modelSayim[md] || 0) + 1;
+        const yl = (idxYil !== undefined && row[idxYil]) ? row[idxYil].toString().trim() : "";
+        if (md) {
+          const anahtar = (md + " " + yl).trim();
+          if (!modelYilSayim[anahtar]) modelYilSayim[anahtar] = { toplam: 0, statu: {} };
+          modelYilSayim[anahtar].toplam++;
+          modelYilSayim[anahtar].statu[statu] = (modelYilSayim[anahtar].statu[statu] || 0) + 1;
+        }
       }
       
       // Yıl aralığı
@@ -4572,10 +4611,7 @@ function filoBilgisiGetir() {
     const sonuc = {
       basarili: true,
       toplamAktif: toplamAktif,
-      mudurluk: mudurlukSayim,
-      tip: tipSayim,
-      model: modelSayim,
-      yil: yilSayim
+      mudurlukGrup: mudurlukGrup
     };
     
     cache.put(cacheKey, JSON.stringify(sonuc), 3600); // 1 saat cache
